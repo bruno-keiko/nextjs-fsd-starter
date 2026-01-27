@@ -1,8 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
-import { DemoBanner } from '@/components/DemoBanner';
-import { LocaleSwitcher } from '@/components/LocaleSwitcher';
-import { BaseTemplate } from '@/templates/BaseTemplate';
+import { DemoBanner, LocaleSwitcher } from '@/shared/ui';
+import { BaseTemplate } from '@/widgets/base-template';
 
 export default async function Layout(props: {
   children: React.ReactNode;
@@ -56,7 +55,7 @@ export default async function Layout(props: {
             <li>
               <a
                 className="border-none text-gray-700 hover:text-gray-900"
-                href="https://github.com/ixartz/Next-js-Boilerplate"
+                href="https://github.com"
               >
                 GitHub
               </a>

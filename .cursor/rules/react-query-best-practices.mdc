@@ -1,0 +1,146 @@
+# React Query (TanStack Query) Best Practices
+
+## Core Principles
+
+- Use React Query for all client-side data fetching and caching
+- Implement proper error handling and loading states
+- Leverage React Query's built-in caching and synchronization
+- Follow FSD architecture for query organization
+- Use TypeScript for type-safe queries and mutations
+
+## Query Client Setup
+
+- Configure QueryClient with appropriate defaults
+- Set up global error handling
+- Enable React Query DevTools in development
+- Configure stale time and cache time based on data characteristics
+
+## Query Organization
+
+### FSD Structure for Queries
+- Place query hooks in `features/*/api/` directories
+- Create query keys in `features/*/lib/query-keys.ts`
+- Export queries through feature's public API
+- Keep query logic separate from UI components
+
+### Query Keys
+- Use hierarchical, predictable query keys
+- Include all variables that affect the query
+- Use constants for query key factories
+- Group related queries with array structure
+
+## Query Patterns
+
+### Data Fetching
+- Use `useQuery` for read operations
+- Implement proper loading and error states
+- Handle empty states gracefully
+- Use `enabled` option for conditional queries
+
+### Mutations
+- Use `useMutation` for write operations
+- Implement optimistic updates when appropriate
+- Invalidate related queries after mutations
+- Handle mutation errors with user feedback
+
+### Infinite Queries
+- Use `useInfiniteQuery` for paginated data
+- Implement proper loading more functionality
+- Handle edge cases (no more data, errors)
+
+## Error Handling
+
+- Implement global error boundary for queries
+- Provide user-friendly error messages
+- Log errors for debugging
+- Implement retry logic with exponential backoff
+
+## Performance Optimization
+
+- Use `select` option to transform data
+- Implement proper `staleTime` and `cacheTime`
+- Use `keepPreviousData` for smooth transitions
+- Leverage `placeholderData` for better UX
+
+## Caching Strategy
+
+- Configure cache time based on data freshness needs
+- Use background refetching for critical data
+- Implement proper cache invalidation
+- Consider cache size limits for large datasets
+
+## TypeScript Integration
+
+- Type query functions and responses
+- Use generic types for reusable query hooks
+- Implement proper error typing
+- Type mutation variables and responses
+
+## Testing
+
+- Mock QueryClient for unit tests
+- Test query loading, success, and error states
+- Test mutation success and error scenarios
+- Use React Query testing utilities
+
+## Common Patterns
+
+### Query Invalidation
+```typescript
+// Invalidate specific queries
+queryClient.invalidateQueries(['users']);
+
+// Invalidate with predicate
+queryClient.invalidateQueries({
+  predicate: (query) => query.queryKey[0] === 'users'
+});
+```
+
+### Optimistic Updates
+```typescript
+const mutation = useMutation(updateUser, {
+  onMutate: async (newUser) => {
+    await queryClient.cancelQueries(['users', newUser.id]);
+    const previousUser = queryClient.getQueryData(['users', newUser.id]);
+    queryClient.setQueryData(['users', newUser.id], newUser);
+    return { previousUser };
+  },
+  onError: (err, newUser, context) => {
+    queryClient.setQueryData(['users', newUser.id], context.previousUser);
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries(['users']);
+  },
+});
+```
+
+### Conditional Queries
+```typescript
+const { data } = useQuery({
+  queryKey: ['user', userId],
+  queryFn: () => fetchUser(userId),
+  enabled: !!userId, // Only run when userId exists
+});
+```
+
+## Anti-Patterns to Avoid
+
+- Don't use React Query for static data that never changes
+- Avoid over-fetching with too many individual queries
+- Don't ignore error states in UI
+- Avoid complex query key structures
+- Don't use queries for one-time operations that don't need caching
+
+## Integration with FSD
+
+- Keep query logic in features layer
+- Use shared layer for common query utilities
+- Export query hooks through feature public API
+- Maintain separation between data fetching and UI logic
+
+## Development Tools
+
+- Use React Query DevTools for debugging
+- Monitor query cache and performance
+- Debug query invalidation and refetching
+- Analyze query timing and dependencies

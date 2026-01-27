@@ -4,9 +4,9 @@ const config: KnipConfig = {
   // Files to exclude from Knip analysis
   ignore: [
     '.storybook/**/*',
-    'src/libs/I18n.ts',
-    'src/types/I18n.ts',
-    'src/utils/Helpers.ts',
+    'src/shared/lib/I18n.ts',
+    'src/shared/types/I18n.ts',
+    'src/shared/utils/Helpers.ts',
     'tests/**/*.ts',
   ],
   // Dependencies to ignore during analysis

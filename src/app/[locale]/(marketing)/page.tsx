@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { Sponsors } from '@/components/Sponsors';
+import { Sponsors } from '@/shared/ui';
 
 type IIndexProps = {
   params: Promise<{ locale: string }>;
@@ -29,17 +29,8 @@ export default async function Index(props: IIndexProps) {
 
   return (
     <>
-      <p>
-        {`Follow `}
-        <a
-          className="text-blue-700 hover:border-b-2 hover:border-blue-700"
-          href="https://twitter.com/ixartz"
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          @Ixartz on Twitter
-        </a>
-        {` for updates and more information about the boilerplate.`}
+      <p className="text-base">
+        {t('intro')}
       </p>
       <h2 className="mt-5 text-2xl font-bold">
         Boilerplate Code for Your Next.js Project with Tailwind CSS

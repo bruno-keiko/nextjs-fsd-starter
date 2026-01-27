@@ -2,9 +2,8 @@ import type { Metadata } from 'next';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import { DemoBadge } from '@/components/DemoBadge';
-import { routing } from '@/libs/I18nRouting';
-import '@/styles/global.css';
+import { DemoBadge, routing } from '@/shared';
+import '@/shared/styles/global.css';
 
 export const metadata: Metadata = {
   icons: [

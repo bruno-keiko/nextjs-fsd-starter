@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
-import { routing } from './libs/I18nRouting';
+import { routing } from '@/shared/lib/I18nRouting';
 
 const handleI18nRouting = createMiddleware(routing);
 
@@ -14,3 +14,4 @@ export const config = {
   // - … the ones containing a dot (e.g. `favicon.ico`)
   matcher: '/((?!_next|_vercel|.*\\..*).*)',
 };
+

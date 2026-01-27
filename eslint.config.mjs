@@ -38,7 +38,7 @@ export default antfu(
   {
     settings: {
       tailwindcss: {
-        config: `${dirname(fileURLToPath(import.meta.url))}/src/styles/global.css`,
+        config: `${dirname(fileURLToPath(import.meta.url))}/src/shared/styles/global.css`,
       },
     },
   },

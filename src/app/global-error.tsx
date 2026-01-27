@@ -1,7 +1,7 @@
 'use client';
 
 import NextError from 'next/error';
-import { routing } from '@/libs/I18nRouting';
+import { routing } from '@/shared/lib/I18nRouting';
 
 export default function GlobalError() {
   return (

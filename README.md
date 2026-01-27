@@ -1,7 +1,7 @@
-# Boilerplate and Starter for Next.js 16+, Tailwind CSS 4, and TypeScript.
+# Starter for Next.js, Tailwind CSS, and TypeScript.
 
 <p align="center">
-  <a href="https://demo.nextjs-boilerplate.com">
+  <a href="#">
     <img
       src="public/assets/images/nextjs-starter-banner.png?raw=true"
       alt="Next js starter banner"
@@ -12,7 +12,7 @@
 
 🚀 Boilerplate and Starter for Next.js with App Router, Tailwind CSS, and TypeScript ⚡️ Prioritizing developer experience first: Next.js, TypeScript, ESLint, Prettier, Lefthook (replacing Husky), Lint-Staged, Vitest (replacing Jest), Testing Library, Playwright, Commitlint, VSCode, Tailwind CSS, Database with DrizzleORM (PostgreSQL, SQLite, and MySQL), Local database with PGlite, Logging with LogTape (replacing Pino.js), Storybook, Multi-language (i18n), and more.
 
-Clone this project and use it to create your own Next.js project.
+Use this project as a starting point for your own Next.js project.
 
 
 ### Features
@@ -86,8 +86,6 @@ Optional features (easy to add):
 Run the following command on your local environment:
 
 ```shell
-git clone --depth=1 https://github.com/ixartz/Next-js-Boilerplate.git my-project-name
-cd my-project-name
 npm install
 ```
 
@@ -101,7 +99,7 @@ npm run dev
 
 Open http://localhost:3000 with your favorite browser to see your project. For your information, the project is already pre-configured with a local database using PGlite. No extra setup is required to run the project locally.
 
-Need advanced features? Multi-tenancy & Teams, Roles & Permissions, Shadcn UI, End-to-End Typesafety with oRPC, Stripe Payment, Light / Dark mode. Try [Next.js Boilerplate Pro](https://nextjs-boilerplate.com/pro-saas-starter-kit).
+Need advanced features? Extend this starter as needed for your product.
 
 ### Set up remote database
 
@@ -117,7 +115,7 @@ If you want to create a fresh and empty database, you just need to remove the fo
 
 ### Translation (i18n) setup
 
-For translation, the project uses `next-intl`. You can manage translations by editing the locale files in the `src/locales` directory. The project supports multiple languages and you can add new languages by creating new locale files.
+For translation, the project uses `next-intl`. You can manage translations by editing the locale files in the `src/shared/config/locales` directory.
 
 ### Project structure
 
@@ -133,15 +131,10 @@ For translation, the project uses `next-intl`. You can manage translations by ed
 ├── public                          # Public assets folder
 ├── src
 │   ├── app                         # Next JS App (App Router)
-│   ├── components                  # React components
-│   ├── libs                        # 3rd party libraries configuration
-│   ├── locales                     # Locales folder (i18n messages)
-│   ├── models                      # Database models
-│   ├── styles                      # Styles folder
-│   ├── templates                   # Templates folder
-│   ├── types                       # Type definitions
-│   ├── utils                       # Utilities folder
-│   └── validations                 # Validation schemas
+│   ├── shared                      # Shared layer (ui, utils, lib, config)
+│   ├── entities                    # Entities layer
+│   ├── features                    # Features layer
+│   └── widgets                     # Widgets layer
 ├── tests
 │   ├── e2e                         # E2E tests, also includes Monitoring as Code
 │   └── integration                 # Integration tests
@@ -158,8 +151,8 @@ For translation, the project uses `next-intl`. You can manage translations by ed
 You can easily configure Next js Boilerplate by searching the entire project for `FIXME:` to make quick customizations. Here are some of the most important files to customize:
 
 - `public/apple-touch-icon.png`, `public/favicon.ico`, `public/favicon-16x16.png` and `public/favicon-32x32.png`: your website favicon
-- `src/utils/AppConfig.ts`: configuration file
-- `src/templates/BaseTemplate.tsx`: default theme
+- `src/shared/utils/AppConfig.ts`: configuration file
+- `src/widgets/base-template/ui/base-template.tsx`: default theme
 - `next.config.ts`: Next.js configuration
 - `.env`: default environment variables
 
@@ -167,7 +160,7 @@ You have full access to the source code for further customization. The provided 
 
 ### Change database schema
 
-To modify the database schema in the project, you can update the schema file located at `./src/models/Schema.ts`. This file defines the structure of your database tables using the Drizzle ORM library.
+To modify the database schema in the project, update `./src/entities/counter/model/schema.ts`.
 
 After making changes to the schema, generate a migration by running the following command:
 
