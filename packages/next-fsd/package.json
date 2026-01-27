@@ -1,0 +1,23 @@
+{
+  "name": "next-fsd",
+  "version": "0.0.0",
+  "description": "Scaffold a Next.js + Feature-Sliced Design starter",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "next-fsd": "./bin/next-fsd.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "nextjs",
+    "fsd",
+    "feature-sliced",
+    "scaffold",
+    "starter"
+  ],
+  "dependencies": {
+    "degit": "^2.8.4"
+  }
+}
