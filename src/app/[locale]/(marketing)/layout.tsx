@@ -1,6 +1,5 @@
-import { getTranslations, setRequestLocale } from 'next-intl/server';
-import Link from 'next/link';
-import { DemoBanner, LocaleSwitcher } from '@/shared/ui';
+import { setRequestLocale } from 'next-intl/server';
+import { LocaleSwitcher } from '@/shared/ui';
 import { BaseTemplate } from '@/widgets/base-template';
 
 export default async function Layout(props: {
@@ -9,59 +8,11 @@ export default async function Layout(props: {
 }) {
   const { locale } = await props.params;
   setRequestLocale(locale);
-  const t = await getTranslations({
-    locale,
-    namespace: 'RootLayout',
-  });
 
   return (
     <>
-      <DemoBanner />
       <BaseTemplate
-        leftNav={(
-          <>
-            <li>
-              <Link
-                href="/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('home_link')}
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/about/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('about_link')}
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/counter/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('counter_link')}
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/portfolio/"
-                className="border-none text-gray-700 hover:text-gray-900"
-              >
-                {t('portfolio_link')}
-              </Link>
-            </li>
-            <li>
-              <a
-                className="border-none text-gray-700 hover:text-gray-900"
-                href="https://github.com"
-              >
-                GitHub
-              </a>
-            </li>
-          </>
-        )}
+        leftNav={null}
         rightNav={(
           <>
             <li>
@@ -70,7 +21,7 @@ export default async function Layout(props: {
           </>
         )}
       >
-        <div className="py-5 text-xl [&_p]:my-6">{props.children}</div>
+        {props.children}
       </BaseTemplate>
     </>
   );

@@ -1,4 +1,4 @@
-# Starter for Next.js, Tailwind CSS, and TypeScript.
+# Next.js Starter with Feature-Sliced Design
 
 <p align="center">
   <a href="#">
@@ -10,9 +10,24 @@
   </a>
 </p>
 
-🚀 Boilerplate and Starter for Next.js with App Router, Tailwind CSS, and TypeScript ⚡️ Prioritizing developer experience first: Next.js, TypeScript, ESLint, Prettier, Lefthook (replacing Husky), Lint-Staged, Vitest (replacing Jest), Testing Library, Playwright, Commitlint, VSCode, Tailwind CSS, Database with DrizzleORM (PostgreSQL, SQLite, and MySQL), Local database with PGlite, Logging with LogTape (replacing Pino.js), Storybook, Multi-language (i18n), and more.
+🚀 **Production-ready Next.js boilerplate** with App Router, Tailwind CSS, TypeScript, and **Feature-Sliced Design (FSD)** architecture ⚡️ 
 
-Use this project as a starting point for your own Next.js project.
+Prioritizing developer experience first: Next.js, TypeScript, ESLint, Prettier, Lefthook (replacing Husky), Lint-Staged, Vitest (replacing Jest), Testing Library, Playwright, Commitlint, VSCode, Tailwind CSS, Database with DrizzleORM (PostgreSQL, SQLite, and MySQL), Local database with PGlite, Logging with LogTape (replacing Pino.js), Storybook, Multi-language (i18n), **shadcn/ui components**, and more.
+
+## 🚀 Quick Start with CLI
+
+The easiest way to get started is using our CLI tool:
+
+```bash
+npx next-fsd my-app
+cd my-app
+npm install
+npm run dev
+```
+
+This will scaffold a new project based on this starter template. Visit [npm package](https://www.npmjs.com/package/next-fsd) for more information.
+
+**Or** clone this repository and use it as a starting point for your own Next.js project.
 
 
 ### Features
@@ -22,6 +37,8 @@ Developer experience first, extremely flexible code structure and only keep what
 - ⚡ [Next.js](https://nextjs.org) with App Router support 
 - 🔥 Type checking [TypeScript](https://www.typescriptlang.org)
 - 💎 Integrate with [Tailwind CSS](https://tailwindcss.com)
+- 🎨 [shadcn/ui](https://ui.shadcn.com) components for beautiful, accessible UI
+- 🏗️ Feature-Sliced Design (FSD) architecture for scalable code organization
 - ✅ Strict Mode for TypeScript and React 19
 - 📦 Type-safe ORM with DrizzleORM, compatible with PostgreSQL, SQLite, and MySQL
 - 💽 Offline and local development database with PGlite
@@ -83,6 +100,17 @@ Optional features (easy to add):
 
 ### Getting started
 
+#### Option 1: Using the CLI (Recommended)
+
+```bash
+npx next-fsd my-app
+cd my-app
+npm install
+npm run dev
+```
+
+#### Option 2: Clone and Install
+
 Run the following command on your local environment:
 
 ```shell
@@ -132,6 +160,7 @@ For translation, the project uses `next-intl`. You can manage translations by ed
 ├── src
 │   ├── app                         # Next JS App (App Router)
 │   ├── shared                      # Shared layer (ui, utils, lib, config)
+│   │   └── ui                      # shadcn/ui components
 │   ├── entities                    # Entities layer
 │   ├── features                    # Features layer
 │   └── widgets                     # Widgets layer

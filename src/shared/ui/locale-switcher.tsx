@@ -20,7 +20,7 @@ export const LocaleSwitcher = () => {
     <select
       defaultValue={locale}
       onChange={handleChange}
-      className="border border-gray-300 font-medium focus:outline-hidden focus-visible:ring-3"
+      className="h-9 rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-1 text-sm font-medium text-[hsl(var(--foreground))] transition-colors focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2 hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]"
       aria-label="lang-switcher"
     >
       {routing.locales.map(elt => (

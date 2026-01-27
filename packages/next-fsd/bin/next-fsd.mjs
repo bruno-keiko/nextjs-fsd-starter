@@ -9,7 +9,7 @@ function parseArgs(argv) {
   const args = argv.slice(2);
 
   let projectName;
-  let template = process.env.NEXT_FSD_TEMPLATE || 'begench/next-starter';
+  let template = process.env.NEXT_FSD_TEMPLATE || 'bruno-keiko/nextjs-fsd-starter';
   let ref = process.env.NEXT_FSD_REF || 'main';
   let force = false;
 
