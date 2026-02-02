@@ -1,6 +1,6 @@
 # Next.js Starter with Feature-Sliced Design
 
-🚀 **Production-ready Next.js boilerplate** with App Router, Tailwind CSS, TypeScript, and **Feature-Sliced Design (FSD)** architecture ⚡️ 
+🚀 **Production-ready Next.js boilerplate** with App Router, Tailwind CSS, TypeScript, and **Feature-Sliced Design (FSD)** architecture ⚡️
 
 Prioritizing developer experience first: Next.js, TypeScript, ESLint, Prettier, Lefthook (replacing Husky), Lint-Staged, Vitest (replacing Jest), Testing Library, Playwright, Commitlint, VSCode, Tailwind CSS, Database with DrizzleORM (PostgreSQL, SQLite, and MySQL), Local database with PGlite, Logging with LogTape (replacing Pino.js), Storybook, Multi-language (i18n), **shadcn/ui components**, and more.
 
@@ -15,16 +15,21 @@ npm install
 npm run dev
 ```
 
-This will scaffold a new project based on this starter template. Visit [npm package](https://www.npmjs.com/package/next-fsd) for more information.
+By default, this scaffolds a **frontend-only** project (no database, no PGLite). Use `--include db` when you need database features (Drizzle, PGLite, migrations):
 
-**Or** clone this repository and use it as a starting point for your own Next.js project.
+```bash
+npx next-fsd my-app --include db
+```
 
+Visit [npm package](https://www.npmjs.com/package/next-fsd) for more information.
+
+**Or** clone this repository and use it as a starting point for your own Next.js project (includes full database setup).
 
 ### Features
 
 Developer experience first, extremely flexible code structure and only keep what you need:
 
-- ⚡ [Next.js](https://nextjs.org) with App Router support 
+- ⚡ [Next.js](https://nextjs.org) with App Router support
 - 🔥 Type checking [TypeScript](https://www.typescriptlang.org)
 - 💎 Integrate with [Tailwind CSS](https://tailwindcss.com)
 - 🎨 [shadcn/ui](https://ui.shadcn.com) components for beautiful, accessible UI
@@ -67,12 +72,6 @@ Built-in features from Next.js:
 - 💨 Live reload
 - ✅ Cache busting
 
-Optional features (easy to add):
-
-- 🔑 Multi-tenancy, Role-based access control (RBAC)
-- 🔐 OAuth for Single Sign-On (SSO), Enterprise SSO, SAML, OpenID Connect (OIDC), EASIE
-- 🔗 Web 3 (Base, MetaMask, Coinbase Wallet, OKX Wallet)
-
 ### Philosophy
 
 - Nothing is hidden from you, allowing you to make any necessary adjustments to suit your requirements and preferences.
@@ -93,7 +92,9 @@ Optional features (easy to add):
 #### Option 1: Using the CLI (Recommended)
 
 ```bash
-npx next-fsd my-app
+npx next-fsd my-app              # Frontend only (default)
+# or
+npx next-fsd my-app --include db # With database (Drizzle, PGLite)
 cd my-app
 npm install
 npm run dev
