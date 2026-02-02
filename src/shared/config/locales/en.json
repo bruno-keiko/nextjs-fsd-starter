@@ -12,8 +12,7 @@
   "Index": {
     "intro": "Welcome! This starter is set up with Next.js, Tailwind CSS, TypeScript, and a clean project structure.",
     "meta_title": "Starter Presentation",
-    "meta_description": "A solid starter for your project. Build your application with Next.js.",
-    "sponsors_title": "Sponsors"
+    "meta_description": "A solid starter for your project. Build your application with Next.js."
   },
   "Counter": {
     "meta_title": "Counter",

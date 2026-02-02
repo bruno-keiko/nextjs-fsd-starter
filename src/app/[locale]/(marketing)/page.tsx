@@ -91,9 +91,7 @@ export default async function Index(props: IIndexProps) {
             Get Started with CLI
           </Link>
           <Link
-            href="https://github.com/bruno-keiko/nextjs-fsd-starter"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#"
             className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'text-base')}
           >
             View on GitHub

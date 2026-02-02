@@ -164,13 +164,10 @@ async function main() {
   console.log('  npm run dev');
 }
 
-// If this file is invoked directly, run main().
-const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
-if (isDirectRun) {
-  main().catch((err) => {
-    // eslint-disable-next-line no-console
-    console.error(err);
-    process.exit(1);
-  });
-}
+// Always run main() when this file is executed
+main().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error(err);
+  process.exit(1);
+});
 

@@ -12,8 +12,7 @@
   "Index": {
     "intro": "Bienvenue ! Ce starter est configuré avec Next.js, Tailwind CSS, TypeScript et une structure de projet propre.",
     "meta_title": "Présentation du starter",
-    "meta_description": "Un starter solide pour votre projet. Construisez votre application avec Next.js.",
-    "sponsors_title": "Partenaires"
+    "meta_description": "Un starter solide pour votre projet. Construisez votre application avec Next.js."
   },
   "Counter": {
     "meta_title": "Compteur",

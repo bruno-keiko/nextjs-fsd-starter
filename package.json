@@ -1,6 +1,5 @@
 {
-  "name": "next-js-boilerplate",
-  "author": "Ixartz (https://github.com/ixartz)",
+  "name": "next-starter",
   "engines": {
     "node": ">=20"
   },

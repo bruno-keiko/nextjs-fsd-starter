@@ -1,6 +1,6 @@
 {
   "name": "next-fsd",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Scaffold a Next.js + Feature-Sliced Design starter",
   "license": "MIT",
   "type": "module",
