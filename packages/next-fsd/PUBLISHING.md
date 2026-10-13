@@ -1,112 +1,30 @@
-# Publishing `next-fsd` to npm
+# Releasing `next-fsd`
 
-## Prerequisites
+The npm package and its default template use the same version. `next-fsd@1.1.0` downloads the reviewed `next-fsd-v1.1.0` Git tag rather than `main`.
 
-1. **Create an npm account** (if you don't have one):
+1. Update the package version and lockfile with `npm version <version> --no-git-tag-version --prefix packages/next-fsd`.
+2. Run root validation, `npm test --prefix packages/next-fsd`, and `npm run test:generated --prefix packages/next-fsd`.
+3. Commit and push the change. Wait for GitHub CI to pass.
+4. Create the matching template tag on that tested commit and push it:
+
    ```bash
-   npm signup
+   git tag next-fsd-v1.1.0 <tested-commit>
+   git push origin next-fsd-v1.1.0
    ```
-   Or visit: https://www.npmjs.com/signup
 
-2. **Enable Two-Factor Authentication (2FA)**:
-   - Go to https://www.npmjs.com/settings/[your-username]/security
-   - Enable 2FA (recommended: use an authenticator app)
-   - OR create a granular access token with "publish" permissions:
-     - Go to https://www.npmjs.com/settings/[your-username]/tokens
-     - Click "Generate New Token"
-     - Select "Granular Access Token"
-     - Choose "Publish" scope
-     - Copy the token (you'll only see it once!)
+5. Inspect the npm archive with `npm pack --dry-run --prefix packages/next-fsd`. It must include the CLI helpers and package metadata.
+6. Test the packed package against the pushed template tag in a temporary directory. Verify both database choices and `--minimal`.
+7. Sign in to an npm account authorized to publish `next-fsd`, then publish:
 
-3. **Login to npm**:
    ```bash
    npm login
-   ```
-
-   If using a granular access token instead of 2FA:
-   ```bash
-   npm login --auth-type=legacy
-   ```
-   Then enter your username and the token as the password.
-
-4. **Check if the package name is available**:
-   ```bash
-   npm view next-fsd
-   ```
-   If it returns 404, the name is available. If it shows package info, you'll need to choose a different name or use a scoped package (e.g., `@your-username/next-fsd`).
-
-## Publishing Steps
-
-**⚠️ IMPORTANT**: npm requires 2FA or a granular access token to publish packages. Make sure you've completed step 2 above before proceeding.
-
-1. **Navigate to the package directory**:
-   ```bash
+   npm whoami
    cd packages/next-fsd
-   ```
-
-2. **Verify package contents**:
-   ```bash
-   npm pack --dry-run
-   ```
-   This shows what files will be included in the published package.
-
-3. **Update version** (if needed):
-   Edit `package.json` and change the `version` field:
-   - `1.0.0` for initial release
-   - `1.0.1` for patch updates
-   - `1.1.0` for minor updates
-   - `2.0.0` for major updates
-
-4. **Publish to npm**:
-   ```bash
-   npm publish
-   ```
-
-   For a scoped package (if name is taken):
-   ```bash
    npm publish --access public
    ```
 
-5. **Verify publication**:
-   ```bash
-   npm view next-fsd
-   ```
-   Or visit: https://www.npmjs.com/package/next-fsd
+8. Confirm the registry version with `npm view next-fsd version` and run `npx next-fsd@<version> <new-project>`.
 
-## Testing Before Publishing
+Use the actual release version in the commands above. Never move an existing template tag; make a new release for changes. `--ref main` is available for testing unpublished template changes, and custom templates default to `main` unless a ref is supplied.
 
-Test locally using `npm link`:
-
-1. **In the package directory**:
-   ```bash
-   cd packages/next-fsd
-   npm link
-   ```
-
-2. **In another directory** (or globally):
-   ```bash
-   npm link next-fsd
-   ```
-
-3. **Test the command**:
-   ```bash
-   next-fsd test-app --template bruno-keiko/nextjs-fsd-starter
-   ```
-
-4. **Unlink when done**:
-   ```bash
-   npm unlink -g next-fsd
-   ```
-
-## Updating the Package
-
-1. Make your changes
-2. Update the version in `package.json`
-3. Run `npm publish` again
-
-## Important Notes
-
-- The default template is set to `bruno-keiko/nextjs-fsd-starter` in the CLI code
-- Make sure your GitHub repo is public so `degit` can clone it
-- Test the CLI thoroughly before publishing
-- Consider adding tests and CI/CD for automated publishing
+The repository's semantic-release workflow creates GitHub releases. It does not publish this npm package.

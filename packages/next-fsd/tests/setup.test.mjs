@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { validateProjectPaths } from '../bin/paths.mjs';
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
 const cli = fileURLToPath(new URL('../bin/next-fsd.mjs', import.meta.url));
@@ -39,6 +40,15 @@ async function fixture(t) {
     'src/entities/counter/model/index.ts': 'export { counterSchema } from \'./schema\';\n',
     'src/entities/counter/ui/current-count.tsx': 'export const CurrentCount = () => null;\n',
     'src/entities/counter/index.server.ts': 'export { CurrentCount } from \'./ui\';\n',
+    'src/shared/config/StarterConfig.ts': await readFile(path.join(repo, 'src/shared/config/StarterConfig.ts'), 'utf8'),
+    'src/shared/config/locales/en.json': await readFile(path.join(repo, 'src/shared/config/locales/en.json'), 'utf8'),
+    'src/shared/config/locales/fr.json': await readFile(path.join(repo, 'src/shared/config/locales/fr.json'), 'utf8'),
+    'src/app/[locale]/(marketing)/layout.tsx': await readFile(path.join(repo, 'src/app/[locale]/(marketing)/layout.tsx'), 'utf8'),
+    'src/app/[locale]/(marketing)/about/page.tsx': 'export default () => null;\n',
+    'src/app/[locale]/(marketing)/portfolio/page.tsx': 'export default () => null;\n',
+    'tests/e2e/Sanity.check.e2e.ts': await readFile(path.join(repo, 'tests/e2e/Sanity.check.e2e.ts'), 'utf8'),
+    'tests/e2e/I18n.e2e.ts': await readFile(path.join(repo, 'tests/e2e/I18n.e2e.ts'), 'utf8'),
+    'tests/e2e/Visual.e2e.ts': await readFile(path.join(repo, 'tests/e2e/Visual.e2e.ts'), 'utf8'),
     'playwright.config.ts': await readFile(path.join(repo, 'playwright.config.ts'), 'utf8'),
   };
   for (const [file, contents] of Object.entries(files)) {
@@ -76,6 +86,7 @@ for (const tool of selected) {
     await writeFile(path.join(bin, 'npx'), `#!/bin/sh\nexec '${process.execPath.replaceAll('\'', '\'\\\'\'')}' '${installer.replaceAll('\'', '\'\\\'\'')}' "$@"\n`, { mode: 0o755 });
   }
   return {
+    root,
     source,
     cwd,
     target: path.join(cwd, 'app'),
@@ -85,9 +96,9 @@ for (const tool of selected) {
   };
 }
 
-function runCli(f, args = [], answers = [], env = {}) {
+function runCli(f, args = [], answers = [], env = {}, projectName = 'app') {
   return new Promise((resolve, reject) => {
-    const cliArgs = ['app', '--template', f.source, ...args];
+    const cliArgs = [projectName, '--template', f.source, ...args];
     const command = answers.length
       ? ['--input-type=module', '-e', `process.stdin.isTTY = true; process.stdout.isTTY = true; process.argv = ${JSON.stringify([process.execPath, cli, ...cliArgs])}; await import(${JSON.stringify(cli)});`]
       : [cli, ...cliArgs];
@@ -284,6 +295,12 @@ for (const [args, error] of [
   [['--ai-tool', 'none,cursor'], /Choose none by itself/],
   [['--ai-tool'], /requires a tool name/],
   [['--include'], /requires a feature name/],
+  [['--unknown'], /Unknown option/],
+  [['--include', 'auth'], /Unsupported feature/],
+  [['--template'], /requires a repository/],
+  [['--ref'], /requires a branch/],
+  [['--include='], /requires a feature/],
+  [['second-app'], /Unexpected argument/],
   [['--no-db', '--include', 'db'], /cannot be combined/],
 ]) {
   test(`invalid options (${args.join(' ')}) fail before writing a project`, async (t) => {
@@ -304,4 +321,142 @@ test('an existing project is preserved unless force is explicitly requested', as
   assert.match(result.stderr, /Target already exists/);
   assert.equal(await readFile(path.join(f.target, 'keep.txt'), 'utf8'), 'existing work');
   assert.equal(await exists(f.record), false);
+});
+
+for (const target of ['.', '..']) {
+  test(`force refuses the current directory and its parent (${target})`, async (t) => {
+    const f = await fixture(t);
+    await writeFile(path.join(f.cwd, 'keep.txt'), 'keep');
+    const result = await runCli(f, ['--force', '--ai-tool', 'none'], [], {}, target);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /Refusing to use/);
+    assert.equal(await readFile(path.join(f.cwd, 'keep.txt'), 'utf8'), 'keep');
+  });
+}
+
+for (const position of ['same', 'inside', 'parent']) {
+  test(`force refuses targets ${position} the local template`, async (t) => {
+    const f = await fixture(t);
+    let target = f.source;
+    let source = f.source;
+    if (position === 'inside') {
+      target = path.join(source, 'new-app');
+    }
+    if (position === 'parent') {
+      source = path.join(f.source, 'nested-template');
+      await mkdir(source);
+    }
+    const before = await readFile(path.join(f.source, 'package.json'), 'utf8');
+    const result = await runCli(f, ['--force', '--template', source, '--ai-tool', 'none'], [], {}, target);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /must be separate directories/);
+    assert.equal(await readFile(path.join(f.source, 'package.json'), 'utf8'), before);
+  });
+}
+
+test('path checks reject roots and home without mutating them', async () => {
+  await assert.rejects(validateProjectPaths(process.cwd(), path.parse(process.cwd()).root), /Refusing to use/);
+  await assert.rejects(validateProjectPaths(process.cwd(), os.homedir()), /Refusing to use/);
+});
+
+test('path checks follow symlinks before testing source overlap', { skip: process.platform === 'win32' }, async (t) => {
+  const f = await fixture(t);
+  const alias = path.join(f.cwd, 'template-alias');
+  await symlink(f.source, alias, 'dir');
+  await assert.rejects(validateProjectPaths(f.cwd, path.join(alias, 'new-app'), f.source), /must be separate directories/);
+  assert.equal(await exists(path.join(f.source, 'package.json')), true);
+});
+
+test('nested project paths use a valid package basename', async (t) => {
+  const f = await fixture(t);
+  const result = await runCli(f, ['--include', 'db', '--ai-tool', 'none'], [], {}, 'projects/nested-app');
+  assert.equal(result.code, 0, result.stderr);
+  const pkg = JSON.parse(await readFile(path.join(f.cwd, 'projects/nested-app/package.json'), 'utf8'));
+  assert.equal(pkg.name, 'nested-app');
+});
+
+test('invalid package names fail before creating directories', async (t) => {
+  const f = await fixture(t);
+  const result = await runCli(f, ['--ai-tool', 'none'], [], {}, 'INVALID NAME');
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Invalid project name/);
+  assert.equal(await exists(path.join(f.cwd, 'INVALID NAME/package.json')), false);
+});
+
+test('force overwrites only a separate target', async (t) => {
+  const f = await fixture(t);
+  await mkdir(f.target);
+  await writeFile(path.join(f.target, 'old.txt'), 'old');
+  const result = await runCli(f, ['--force', '--include=db', '--ai-tool=none']);
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(await exists(path.join(f.target, 'old.txt')), false);
+  assert.equal(await exists(path.join(f.source, 'package.json')), true);
+});
+
+test('local templates omit private environment files and runtime databases', async (t) => {
+  const f = await fixture(t);
+  await writeFile(path.join(f.source, '.env.local'), 'PRIVATE=fixture');
+  await writeFile(path.join(f.source, 'local.db'), 'fixture database');
+  const result = await runCli(f, ['--include=db', '--ai-tool=none']);
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(await exists(path.join(f.target, '.env.local')), false);
+  assert.equal(await exists(path.join(f.target, 'local.db')), false);
+  assert.equal(await exists(path.join(f.target, '.env')), true);
+});
+
+test('no-database projects use memory copy in every configured locale', async (t) => {
+  const f = await fixture(t);
+  const result = await runCli(f, ['--no-db', '--ai-tool=none']);
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(await readFile(path.join(f.target, 'src/shared/config/StarterConfig.ts'), 'utf8'), /database: false/);
+  const english = JSON.parse(await readFile(path.join(f.target, 'src/shared/config/locales/en.json'), 'utf8'));
+  const french = JSON.parse(await readFile(path.join(f.target, 'src/shared/config/locales/fr.json'), 'utf8'));
+  assert.match(english.CounterForm.presentation, /stored in memory/);
+  assert.match(french.CounterForm.presentation, /stocké en mémoire/);
+  assert.doesNotMatch(english.Counter.meta_description, /DB|database/);
+  assert.doesNotMatch(french.Counter.meta_description, /DB|base de données/);
+});
+
+for (const database of [false, true]) {
+  test(`minimal projects remove demo pages, navigation, translations, and stale E2E tests (db=${database})`, async (t) => {
+    const f = await fixture(t);
+    const result = await runCli(f, ['--minimal', ...(database ? ['--include=db'] : ['--no-db']), '--ai-tool=none']);
+    assert.equal(result.code, 0, result.stderr);
+    for (const route of ['about', 'portfolio']) {
+      assert.equal(await exists(path.join(f.target, `src/app/[locale]/(marketing)/${route}/page.tsx`)), false);
+    }
+    assert.doesNotMatch(await readFile(path.join(f.target, 'src/app/[locale]/(marketing)/layout.tsx'), 'utf8'), /\/about|\/portfolio/);
+    for (const locale of ['en', 'fr']) {
+      const messages = JSON.parse(await readFile(path.join(f.target, `src/shared/config/locales/${locale}.json`), 'utf8'));
+      assert.equal(messages.About, undefined);
+      assert.equal(messages.Portfolio, undefined);
+      assert.equal(messages.PortfolioSlug, undefined);
+      assert.equal(messages.RootLayout.about_link, undefined);
+      assert.ok(messages.Counter);
+    }
+    for (const testFile of ['Sanity.check', 'I18n', 'Visual']) {
+      assert.doesNotMatch(await readFile(path.join(f.target, `tests/e2e/${testFile}.e2e.ts`), 'utf8'), /\/about|\/portfolio/);
+    }
+    assert.match(await readFile(path.join(f.target, 'tests/e2e/I18n.e2e.ts'), 'utf8'), /\/fr\/counter/);
+  });
+}
+
+test('help identifies the template tag associated with the CLI version', async (t) => {
+  const f = await fixture(t);
+  const result = await runCli(f, ['--help']);
+  const pkg = JSON.parse(await readFile(path.join(repo, 'packages/next-fsd/package.json'), 'utf8'));
+  assert.equal(result.code, 0);
+  assert.match(result.stdout, new RegExp(`next-fsd-v${pkg.version.replaceAll('.', '\\.')}`));
+});
+
+test('invalid local templates do not erase an existing force target', async (t) => {
+  const f = await fixture(t);
+  const source = path.join(f.root, 'not-a-template');
+  await mkdir(source);
+  await mkdir(f.target);
+  await writeFile(path.join(f.target, 'keep.txt'), 'keep');
+  const result = await runCli(f, ['--force', '--template', source, '--ai-tool=none']);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /must contain a valid package.json/);
+  assert.equal(await readFile(path.join(f.target, 'keep.txt'), 'utf8'), 'keep');
 });

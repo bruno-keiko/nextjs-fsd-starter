@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Code, Database, Globe, Rocket, Shield, Sparkles, TestTube, Zap } from 'lucide-react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
+import { StarterConfig } from '@/shared/config';
 import { cn } from '@/shared/lib/utils';
 import { Badge, buttonVariants, Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui';
 
@@ -37,6 +38,7 @@ const features = [
     icon: Database,
     title: 'DrizzleORM',
     description: 'Type-safe ORM compatible with PostgreSQL, SQLite, and MySQL. Includes PGlite for local dev.',
+    requiresDatabase: true,
   },
   {
     icon: Globe,
@@ -53,7 +55,7 @@ const features = [
     title: 'Testing Suite',
     description: 'Vitest, Playwright, and Storybook configured for comprehensive testing.',
   },
-];
+].filter(feature => !('requiresDatabase' in feature) || StarterConfig.database);
 
 export default async function Index(props: IIndexProps) {
   const { locale } = await props.params;
@@ -94,7 +96,7 @@ export default async function Index(props: IIndexProps) {
             Get Started with CLI
           </Link>
           <Link
-            href="#"
+            href="https://github.com/bruno-keiko/nextjs-fsd-starter"
             className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'text-base')}
           >
             View on GitHub

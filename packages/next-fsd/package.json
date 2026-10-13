@@ -1,7 +1,7 @@
 {
   "name": "next-fsd",
   "type": "module",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Scaffold a Next.js + Feature-Sliced Design starter",
   "license": "MIT",
   "repository": {
@@ -28,13 +28,15 @@
     "bin"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18.0"
   },
   "scripts": {
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "test:generated": "node scripts/check-generated.mjs"
   },
   "dependencies": {
     "cross-spawn": "^7.0.6",
-    "degit": "^2.8.4"
+    "degit": "^2.8.4",
+    "validate-npm-package-name": "^6.0.2"
   }
 }

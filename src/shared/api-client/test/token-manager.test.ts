@@ -1,60 +1,45 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { TokenManager } from '../token-manager';
 
-vi.mock('next/headers', () => ({
-  cookies: vi.fn(),
-}));
-
-vi.mock('js-cookie', () => ({
-  default: {
-    get: vi.fn(),
-    set: vi.fn(),
-  },
-}));
-
 describe('TokenManager', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    delete (globalThis as any).window;
+  it('does not load or persist credentials without caller-provided storage', async () => {
+    const manager = new TokenManager();
+    await manager.setAccessToken('ignored-access');
+    await manager.setRefreshToken('ignored-refresh');
+
+    expect(await manager.getAccessToken()).toBeUndefined();
+    expect(await manager.getRefreshToken()).toBeUndefined();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it('uses the caller-provided credential store', async () => {
+    let access = 'old-access';
+    let refresh = 'old-refresh';
+    const manager = new TokenManager(
+      async () => access,
+      async () => refresh,
+      async (value) => {
+        access = value;
+      },
+      async (value) => {
+        refresh = value;
+      },
+    );
+
+    expect(await manager.getAccessToken()).toBe('old-access');
+    expect(await manager.getRefreshToken()).toBe('old-refresh');
+
+    await manager.setAccessToken('new-access');
+    await manager.setRefreshToken('new-refresh');
+
+    expect(await manager.getAccessToken()).toBe('new-access');
+    expect(await manager.getRefreshToken()).toBe('new-refresh');
   });
 
-  describe('Constructor with custom functions', async () => {
-    it('should use provided custom getter functions', async () => {
-      const mockGetAccess = vi.fn().mockResolvedValue('custom-access-token');
-      const mockGetRefresh = vi.fn().mockResolvedValue('custom-refresh-token');
-
-      const manager = new TokenManager(mockGetAccess, mockGetRefresh);
-
-      const accessToken = await manager.getAccessToken();
-      const refreshToken = await manager.getRefreshToken();
-
-      expect(mockGetAccess).toHaveBeenCalledOnce();
-      expect(mockGetRefresh).toHaveBeenCalledOnce();
-      expect(accessToken).toBe('custom-access-token');
-      expect(refreshToken).toBe('custom-refresh-token');
+  it('propagates errors from caller-provided storage', async () => {
+    const manager = new TokenManager(async () => {
+      throw new Error('Storage unavailable');
     });
 
-    it('should use provided custom setter functions', async () => {
-      const mockSetAccess = vi.fn().mockResolvedValue(undefined);
-      const mockSetRefresh = vi.fn().mockResolvedValue(undefined);
-
-      const manager = new TokenManager(
-        undefined,
-        undefined,
-        mockSetAccess,
-        mockSetRefresh,
-      );
-      await manager.setAccessToken('new-access-token');
-      await manager.setRefreshToken('new-refresh-token');
-
-      expect(mockSetAccess).toHaveBeenCalledWith('new-access-token');
-      expect(mockSetRefresh).toHaveBeenCalledWith('new-refresh-token');
-      expect(mockSetAccess).toHaveBeenCalledOnce();
-      expect(mockSetRefresh).toHaveBeenCalledOnce();
-    });
+    await expect(manager.getAccessToken()).rejects.toThrow('Storage unavailable');
   });
 });

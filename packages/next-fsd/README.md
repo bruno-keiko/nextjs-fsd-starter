@@ -15,6 +15,8 @@ In an interactive terminal, the CLI asks:
 
 Use flags to skip either prompt. Without an interactive terminal, the defaults are **no database** and **shared AI guidance**.
 
+Requires Node.js 22.18 or newer. Each CLI release downloads its matching reviewed `next-fsd-v<version>` template tag. Use `--ref main` for development; custom templates default to `main`.
+
 Generated projects include the template's `AGENTS.md`, the official FSD skill in `.agents/skills/feature-sliced-design/`, and `skills-lock.json` with its pinned upstream revision. The skill and its references are ready to reuse in each new project.
 
 After scaffolding, the CLI runs `npx skills@1.7.2` against the bundled skill to install it locally for the selected tools. It preserves the pinned upstream lockfile. Claude Code and Gemini CLI also receive instruction files that import `AGENTS.md`; existing instructions are preserved. The skill installer needs npm access or a cached copy of the pinned CLI.
@@ -33,6 +35,7 @@ Frontend-only setup refreshes the copied dependency lockfile using `npx --yes np
 --no-db         Create a project without database support; skip the DB prompt
 --ai-tool       Comma-separated AI tools; skip the tool prompt
 --force, -f      Overwrite target dir if it exists
+--minimal       Keep the homepage and counter; omit about/portfolio demos
 ```
 
 Supported AI tool names: `claude-code`, `cursor`, `codex`, `github-copilot`, `gemini-cli`, `opencode`, `windsurf`, and `universal` (shared guidance). `claude`, `copilot`, and `gemini` are accepted aliases. Use `none` to skip additional AI-tool setup; the bundled instructions and skill remain available.
@@ -44,6 +47,7 @@ npx next-fsd my-app                                       # Ask about database a
 npx next-fsd my-app --no-db --ai-tool claude-code          # No database, Claude Code setup
 npx next-fsd my-app --include db --ai-tool cursor,codex    # Database, multiple AI tools
 npx next-fsd my-app --no-db --ai-tool none                 # Skip both prompts and skill installation
+npx next-fsd my-app --minimal --no-db --ai-tool cursor     # Minimal frontend
 ```
 
 ## Environment
@@ -58,3 +62,4 @@ NEXT_FSD_REF=main
 This folder is a standalone npm package. Publish `packages/next-fsd` to npm as `next-fsd`.
 
 Run its setup regression tests with `npm test --prefix packages/next-fsd` from the repository root.
+Run `npm run test:generated --prefix packages/next-fsd` to validate clean installs, lint, types, FSD, dependencies, translations, and builds for all four database/demo combinations. See [PUBLISHING.md](https://github.com/bruno-keiko/nextjs-fsd-starter/blob/main/packages/next-fsd/PUBLISHING.md) for the versioned release procedure.

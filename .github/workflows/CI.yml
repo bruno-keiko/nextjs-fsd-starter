@@ -51,7 +51,7 @@ jobs:
 
     name: Run static checks
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v6
@@ -72,6 +72,10 @@ jobs:
         run: |
           npm ci --prefix packages/next-fsd
           npm test --prefix packages/next-fsd
+
+      - name: Generated-project checks
+        if: hashFiles('packages/next-fsd/package.json') != ''
+        run: npm run test:generated --prefix packages/next-fsd
 
       - name: Linter
         run: npm run lint

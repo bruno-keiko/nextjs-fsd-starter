@@ -1,486 +1,203 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiFetcher } from '../api-fetcher';
+import { RefreshHandler } from '../refresh-handler';
 
-// Create mock functions
-const mockGetAccessToken = vi.fn();
-const mockSetAccessToken = vi.fn();
-const mockHandleRefreshToken = vi.fn();
-const mockHandleUnauthorized = vi.fn();
+function network() {
+  const fetch = vi.fn<typeof globalThis.fetch>();
+  vi.stubGlobal('fetch', fetch);
+  return fetch;
+}
 
-// Mock the dependencies with proper constructor functions
-vi.mock('../token-manager', () => ({
-  TokenManager: vi.fn(function (
-    this: any,
-    getAccess?: any,
-    getRefresh?: any,
-    setAccess?: any,
-  ) {
-    this.getAccessToken = getAccess || mockGetAccessToken;
-    this.setAccessToken = setAccess || mockSetAccessToken;
-    return this;
-  }),
-}));
-
-vi.mock('../refresh-handler', () => ({
-  RefreshHandler: vi.fn(function (this: any) {
-    this.handleRefreshToken = mockHandleRefreshToken;
-    this.handleUnauthorized = mockHandleUnauthorized;
-    return this;
-  }),
-}));
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('ApiFetcher', () => {
-  let fetcher: ApiFetcher;
-  let mockFetch: ReturnType<typeof vi.fn>;
+  it('returns JSON without reading browser credentials or organization storage', async () => {
+    vi.stubGlobal('window', { location: { href: '/dashboard' } });
+    vi.stubGlobal('localStorage', { getItem: () => '{"state":{"selectedOrganizationId":"old-org"}}' });
+    const fetch = network().mockResolvedValue(Response.json({ id: 1 }));
+    const client = new ApiFetcher('https://api.example.test');
 
-  beforeEach(() => {
-    // Reset all mocks
-    vi.clearAllMocks();
-    mockGetAccessToken.mockResolvedValue('mock-access-token');
-    mockSetAccessToken.mockImplementation(() => {});
-    mockHandleRefreshToken.mockResolvedValue(null);
-    mockHandleUnauthorized.mockResolvedValue(undefined);
+    expect(await client.get('/public')).toEqual({ id: 1 });
 
-    // Mock globalThis fetch
-    mockFetch = vi.fn();
-    globalThis.fetch = mockFetch;
+    const [url, options] = fetch.mock.calls[0]!;
+
+    expect(url).toBe('https://api.example.test/public');
+    expect(new Headers(options?.headers).has('Authorization')).toBe(false);
+    expect(new Headers(options?.headers).has('X-Organization-Id')).toBe(false);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it.each([
+    { label: 'record', headers: { 'X-Project': 'demo' } },
+    { label: 'Headers', headers: new Headers({ 'X-Project': 'demo' }) },
+    { label: 'tuples', headers: [['X-Project', 'demo']] as [string, string][] },
+  ])('preserves $label headers and adds explicitly configured authentication', async ({ headers }) => {
+    const fetch = network().mockResolvedValue(Response.json({ ok: true }));
+    const client = new ApiFetcher({ prefix: 'https://api.example.test', getAccessToken: async () => 'caller-token' });
+
+    expect(await client.get('/resource', { headers })).toEqual({ ok: true });
+
+    const sent = new Headers(fetch.mock.calls[0]![1]?.headers);
+
+    expect(sent.get('X-Project')).toBe('demo');
+    expect(sent.get('Authorization')).toBe('Bearer caller-token');
   });
 
-  describe('Constructor', () => {
-    it('should initialize with string config', () => {
-      fetcher = new ApiFetcher('https://api.example.com');
+  it('preserves a caller-supplied authorization header when no token getter is configured', async () => {
+    const fetch = network().mockResolvedValue(Response.json({ ok: true }));
+    const client = new ApiFetcher('https://api.example.test');
 
-      expect(fetcher).toBeDefined();
-    });
-
-    it('should initialize with object config', () => {
-      const config = {
-        prefix: 'https://api.example.com',
-        getAccessToken: vi.fn(),
-        getRefreshToken: vi.fn(),
-        setAccessToken: vi.fn(),
-        setRefreshToken: vi.fn(),
-        refreshTokenFn: vi.fn(),
-        onUnauthorized: vi.fn(),
-        shouldRefreshToken: vi.fn(),
-      };
-
-      fetcher = new ApiFetcher(config);
-
-      expect(fetcher).toBeDefined();
-    });
+    expect(await client.get('/resource', { headers: { Authorization: 'Custom credential' } })).toEqual({ ok: true });
+    expect(new Headers(fetch.mock.calls[0]![1]?.headers).get('Authorization')).toBe('Custom credential');
   });
 
-  describe('GET requests', () => {
-    beforeEach(() => {
-      fetcher = new ApiFetcher('https://api.example.com');
-    });
+  it.each(['post', 'put', 'patch'] as const)('serializes JSON for %s requests', async (method) => {
+    const fetch = network().mockResolvedValue(Response.json({ id: 2 }));
+    const client = new ApiFetcher('https://api.example.test');
 
-    it('should make a successful GET request with JSON response', async () => {
-      const mockData = { id: 1, name: 'Test' };
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue(mockData),
-      });
+    expect(await client[method]('/resource', { name: 'demo' })).toEqual({ id: 2 });
 
-      const result = await fetcher.get('/users');
+    const sent = fetch.mock.calls[0]![1]!;
 
-      expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/users', {
-        method: 'GET',
-        headers: {
-          Authorization: 'Bearer mock-access-token',
-        },
-      });
-      expect(result).toEqual(mockData);
-    });
-
-    it('should make GET request without token if not available', async () => {
-      mockGetAccessToken.mockResolvedValueOnce(null);
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue({}),
-      });
-
-      await fetcher.get('/public');
-
-      expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/public', {
-        method: 'GET',
-        headers: {},
-      });
-    });
-
-    it('should handle non-JSON response', async () => {
-      const mockResponse = { ok: true, headers: new Headers() };
-      mockFetch.mockResolvedValue(mockResponse);
-
-      const result = await fetcher.get('/download');
-
-      expect(result).toBe(mockResponse);
-    });
-
-    it('should include custom headers', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue({}),
-      });
-
-      await fetcher.get('/users', {
-        headers: { 'X-Custom-Header': 'value' },
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/users', {
-        method: 'GET',
-        headers: {
-          'X-Custom-Header': 'value',
-          'Authorization': 'Bearer mock-access-token',
-        },
-      });
-    });
+    expect(sent.method).toBe(method.toUpperCase());
+    expect(sent.body).toBe('{"name":"demo"}');
+    expect(new Headers(sent.headers).get('Content-Type')).toBe('application/json');
   });
 
-  describe('POST requests', () => {
-    beforeEach(() => {
-      fetcher = new ApiFetcher('https://api.example.com');
-    });
+  it.each(['post', 'put', 'patch'] as const)('lets fetch set the multipart boundary for %s uploads', async (method) => {
+    const fetch = network().mockResolvedValue(Response.json({ uploaded: true }));
+    const client = new ApiFetcher('https://api.example.test');
+    const body = new FormData();
+    body.set('name', 'demo');
 
-    it('should make POST request with JSON body', async () => {
-      const mockData = { id: 1 };
-      const postData = { name: 'New User' };
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue(mockData),
-      });
+    expect(await client[method]('/upload', body, { headers: new Headers({ 'Content-Type': 'application/json', 'X-Project': 'demo' }) })).toEqual({ uploaded: true });
 
-      const result = await fetcher.post('/users', postData);
+    const sent = fetch.mock.calls[0]![1]!;
 
-      expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-access-token',
-        },
-        body: JSON.stringify(postData),
-      });
-      expect(result).toEqual(mockData);
-    });
-
-    it('should handle FormData in POST request', async () => {
-      const formData = new FormData();
-      formData.append('file', 'test');
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue({}),
-      });
-
-      await fetcher.post('/upload', formData);
-
-      expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/upload', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer mock-access-token',
-        },
-        body: formData,
-      });
-    });
+    expect(sent.body).toBe(body);
+    expect(new Headers(sent.headers).has('Content-Type')).toBe(false);
+    expect(new Headers(sent.headers).get('X-Project')).toBe('demo');
   });
 
-  describe('PUT requests', () => {
-    beforeEach(() => {
-      fetcher = new ApiFetcher('https://api.example.com');
-    });
+  it('supports delete and passes through non-JSON responses', async () => {
+    const response = new Response(null, { status: 204 });
+    const fetch = network().mockResolvedValue(response);
+    const client = new ApiFetcher('https://api.example.test');
 
-    it('should make PUT request with JSON body', async () => {
-      const mockData = { id: 1, name: 'Updated' };
-      const putData = { name: 'Updated User' };
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue(mockData),
-      });
-
-      const result = await fetcher.put('/users/1', putData);
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.example.com/users/1',
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer mock-access-token',
-          },
-          body: JSON.stringify(putData),
-        },
-      );
-      expect(result).toEqual(mockData);
-    });
-
-    it('should handle FormData in PUT request', async () => {
-      const formData = new FormData();
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue({}),
-      });
-
-      await fetcher.put('/users/1', formData);
-
-      const call = mockFetch.mock.calls[0];
-
-      expect(call[1].body).toBe(formData);
-      expect(call[1].headers.Authorization).toBe('Bearer mock-access-token');
-    });
+    expect(await client.delete('/resource')).toBe(response);
+    expect(fetch.mock.calls[0]![1]?.method).toBe('DELETE');
   });
 
-  describe('PATCH requests', () => {
-    beforeEach(() => {
-      fetcher = new ApiFetcher('https://api.example.com');
-    });
+  it('reports HTTP details without redirecting on unauthorized responses', async () => {
+    const location = { href: '/dashboard' };
+    vi.stubGlobal('window', { location });
+    network().mockResolvedValue(Response.json({ message: 'Sign in required' }, { status: 401 }));
+    const client = new ApiFetcher('https://api.example.test');
 
-    it('should make PATCH request with JSON body', async () => {
-      const mockData = { id: 1, name: 'Patched' };
-      const patchData = { name: 'Patched User' };
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue(mockData),
-      });
-
-      const result = await fetcher.patch('/users/1', patchData);
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.example.com/users/1',
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer mock-access-token',
-          },
-          body: JSON.stringify(patchData),
-        },
-      );
-      expect(result).toEqual(mockData);
-    });
+    await expect(client.get('/private')).rejects.toMatchObject({ message: 'Sign in required', status: 401, url: 'https://api.example.test/private' });
+    expect(location.href).toBe('/dashboard');
   });
 
-  describe('DELETE requests', () => {
-    beforeEach(() => {
-      fetcher = new ApiFetcher('https://api.example.com');
-    });
+  it('lets the caller handle unauthorized responses', async () => {
+    const events: number[] = [];
+    network().mockResolvedValue(new Response(null, { status: 401, statusText: 'Unauthorized' }));
+    const client = new ApiFetcher({ prefix: 'https://api.example.test', onUnauthorized: async (error) => {
+      events.push(error.status!);
+    } });
 
-    it('should make DELETE request', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: vi.fn().mockResolvedValue({ success: true }),
-      });
-
-      const result = await fetcher.delete('/users/1');
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.example.com/users/1',
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: 'Bearer mock-access-token',
-          },
-        },
-      );
-      expect(result).toEqual({ success: true });
-    });
+    await expect(client.get('/private')).rejects.toMatchObject({ status: 401 });
+    expect(events).toEqual([401]);
   });
 
-  describe('Error handling', () => {
-    beforeEach(() => {
-      fetcher = new ApiFetcher('https://api.example.com');
+  it('refreshes explicitly configured credentials and retries on the server', async () => {
+    let token = 'expired';
+    const fetch = network()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(Response.json({ authenticated: true }));
+    const client = new ApiFetcher({
+      prefix: 'https://api.example.test',
+      getAccessToken: async () => token,
+      setAccessToken: async (value) => {
+        token = value;
+      },
+      refreshTokenFn: async () => 'fresh',
     });
 
-    it('should throw error on failed request', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-        headers: new Headers(),
-      });
-
-      await expect(fetcher.get('/users/999')).rejects.toThrow('Not Found');
-    });
-
-    it('should include status and response in error', async () => {
-      const mockResponse = {
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        headers: new Headers(),
-      };
-      mockFetch.mockResolvedValue(mockResponse);
-
-      try {
-        await fetcher.get('/error');
-
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(500);
-        expect(error.response).toBe(mockResponse);
-      }
-    });
+    expect(await client.get('/private')).toEqual({ authenticated: true });
+    expect(new Headers(fetch.mock.calls[0]![1]?.headers).get('Authorization')).toBe('Bearer expired');
+    expect(new Headers(fetch.mock.calls[1]![1]?.headers).get('Authorization')).toBe('Bearer fresh');
   });
 
-  describe('Token refresh on 401', () => {
-    beforeEach(() => {
-      // Mock window to simulate client-side
-      globalThis.window = {} as any;
+  it('stops after one refresh and reports the final unauthorized response', async () => {
+    let refreshes = 0;
+    const fetch = network().mockImplementation(async () => new Response(null, { status: 401 }));
+    const client = new ApiFetcher({ prefix: 'https://api.example.test', refreshTokenFn: async () => {
+      refreshes += 1;
+      return 'fresh';
+    } });
+
+    await expect(client.get('/private')).rejects.toMatchObject({ status: 401 });
+    expect(fetch.mock.calls).toHaveLength(2);
+    expect(refreshes).toBe(1);
+  });
+
+  it('respects a refresh predicate and handles failed refreshes', async () => {
+    let refreshes = 0;
+    let unauthorized = 0;
+    network().mockImplementation(async () => new Response(null, { status: 401 }));
+    const config = {
+      prefix: 'https://api.example.test',
+      refreshTokenFn: async () => {
+        refreshes += 1;
+        throw new Error('Refresh unavailable');
+      },
+      onUnauthorized: async () => {
+        unauthorized += 1;
+      },
+    };
+
+    await expect(new ApiFetcher({ ...config, shouldRefreshToken: () => false }).get('/private')).rejects.toMatchObject({ status: 401 });
+    expect(refreshes).toBe(0);
+    await expect(new ApiFetcher(config).get('/private')).rejects.toMatchObject({ status: 401 });
+    expect(refreshes).toBe(1);
+    expect(unauthorized).toBe(2);
+  });
+
+  it('propagates network failures', async () => {
+    network().mockRejectedValue(new Error('Network unavailable'));
+
+    await expect(new ApiFetcher('https://api.example.test').get('/resource')).rejects.toThrow('Network unavailable');
+  });
+});
+
+describe('RefreshHandler', () => {
+  it('shares one refresh result among concurrent callers', async () => {
+    let finish!: (value: string) => void;
+    let refreshes = 0;
+    let saved = '';
+    const gate = new Promise<string>((resolve) => {
+      finish = resolve;
     });
-
-    afterEach(() => {
-      delete (globalThis as any).window;
+    const handler = new RefreshHandler(async () => {
+      refreshes += 1;
+      return gate;
+    }, async (value) => {
+      saved = value;
     });
+    const first = handler.handleRefreshToken();
+    const second = handler.handleRefreshToken();
+    finish('shared-token');
 
-    it('should retry request after successful token refresh', async () => {
-      const refreshTokenFn = vi.fn().mockResolvedValue('new-token');
-      fetcher = new ApiFetcher({
-        prefix: 'https://api.example.com',
-        refreshTokenFn,
-      });
+    expect(await Promise.all([first, second])).toEqual(['shared-token', 'shared-token']);
+    expect(refreshes).toBe(1);
+    expect(saved).toBe('shared-token');
+  });
 
-      mockHandleRefreshToken.mockResolvedValue('new-token');
+  it('returns null when no refresh callback is configured', async () => {
+    const handler = new RefreshHandler(undefined, async () => {});
 
-      // First call returns 401, second call succeeds
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 401,
-          statusText: 'Unauthorized',
-          headers: new Headers(),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          headers: new Headers({ 'content-type': 'application/json' }),
-          json: vi.fn().mockResolvedValue({ success: true }),
-        });
-
-      const result = await fetcher.get('/protected');
-
-      expect(mockHandleRefreshToken).toHaveBeenCalled();
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(result).toEqual({ success: true });
-    });
-
-    it('should not retry if token refresh fails', async () => {
-      const onUnauthorized = vi.fn();
-      const refreshTokenFn = vi.fn();
-      fetcher = new ApiFetcher({
-        prefix: 'https://api.example.com',
-        refreshTokenFn,
-        onUnauthorized,
-      });
-
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        headers: new Headers(),
-      });
-
-      mockHandleRefreshToken.mockResolvedValue(null);
-
-      await expect(fetcher.get('/protected')).rejects.toThrow();
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-    });
-
-    it('should call onUnauthorized when token refresh fails', async () => {
-      const onUnauthorized = vi.fn();
-      const refreshTokenFn = vi.fn();
-      fetcher = new ApiFetcher({
-        prefix: 'https://api.example.com',
-        refreshTokenFn,
-        onUnauthorized,
-      });
-
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        headers: new Headers(),
-      });
-
-      mockHandleRefreshToken.mockRejectedValue(new Error('Refresh failed'));
-
-      await expect(fetcher.get('/protected')).rejects.toThrow();
-      expect(mockHandleUnauthorized).toHaveBeenCalled();
-    });
-
-    it('should respect shouldRefreshToken predicate', async () => {
-      const shouldRefreshToken = vi.fn().mockReturnValue(false);
-      const refreshTokenFn = vi.fn();
-      const onUnauthorized = vi.fn();
-      fetcher = new ApiFetcher({
-        prefix: 'https://api.example.com',
-        refreshTokenFn,
-        shouldRefreshToken,
-        onUnauthorized,
-      });
-
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        headers: new Headers(),
-      });
-
-      await expect(fetcher.get('/protected')).rejects.toThrow();
-      expect(shouldRefreshToken).toHaveBeenCalled();
-      expect(mockHandleRefreshToken).not.toHaveBeenCalled();
-    });
-
-    it('should not refresh token on server-side', async () => {
-      delete (globalThis as any).window;
-
-      const refreshTokenFn = vi.fn();
-      fetcher = new ApiFetcher({
-        prefix: 'https://api.example.com',
-        refreshTokenFn,
-      });
-
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        headers: new Headers(),
-      });
-
-      await expect(fetcher.get('/protected')).rejects.toThrow();
-      expect(mockHandleRefreshToken).not.toHaveBeenCalled();
-    });
-
-    it('should not retry more than once', async () => {
-      const refreshTokenFn = vi.fn();
-      fetcher = new ApiFetcher({
-        prefix: 'https://api.example.com',
-        refreshTokenFn,
-      });
-
-      // Both calls return 401
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        headers: new Headers(),
-      });
-
-      mockHandleRefreshToken.mockResolvedValue('new-token');
-
-      await expect(fetcher.get('/protected')).rejects.toThrow();
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(mockHandleRefreshToken).toHaveBeenCalledTimes(1);
-    });
+    expect(await handler.handleRefreshToken()).toBeNull();
+    expect(await handler.handleRefreshToken()).toBeNull();
   });
 });

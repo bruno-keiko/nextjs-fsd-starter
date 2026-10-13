@@ -5,18 +5,25 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import degit from 'degit';
+import { configureContent } from './content.mjs';
+import { validateProjectPaths } from './paths.mjs';
 import { chooseSetup, installAiSkills, parseAiTools, refreshDependencyLock } from './setup.mjs';
+
+const defaultTemplate = 'bruno-keiko/nextjs-fsd-starter';
+const metadata = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const templateRef = `next-fsd-v${metadata.version}`;
 
 function parseArgs(argv) {
   const args = argv.slice(2);
 
   let projectName;
-  let template = process.env.NEXT_FSD_TEMPLATE || 'bruno-keiko/nextjs-fsd-starter';
-  let ref = process.env.NEXT_FSD_REF || 'main';
+  let template = process.env.NEXT_FSD_TEMPLATE || defaultTemplate;
+  let ref = process.env.NEXT_FSD_REF;
   let force = false;
   let aiTools;
   let databaseSelected = false;
   let noDb = false;
+  let minimal = false;
   const include = new Set();
 
   for (let i = 0; i < args.length; i += 1) {
@@ -28,12 +35,21 @@ function parseArgs(argv) {
       force = true;
       continue;
     }
+    if (a === '--minimal') {
+      minimal = true;
+      continue;
+    }
     if (a === '--include' || a === '-i' || a.startsWith('--include=')) {
       const value = a.startsWith('--include=') ? a.slice('--include='.length) : args[++i];
       if (!value || value.startsWith('-')) {
         throw new Error('--include requires a feature name, such as db.');
       }
-      value.split(',').map(s => s.trim()).filter(Boolean).forEach(f => include.add(f));
+      for (const feature of value.split(',').map(s => s.trim())) {
+        if (feature !== 'db') {
+          throw new Error(`Unsupported feature: ${feature || '(empty)'}. Only db is supported.`);
+        }
+        include.add(feature);
+      }
       databaseSelected = true;
       continue;
     }
@@ -50,25 +66,37 @@ function parseArgs(argv) {
       aiTools = parseAiTools(value);
       continue;
     }
-    if (a === '--template' || a === '-t') {
-      template = args[i + 1];
-      i += 1;
+    if (a === '--template' || a === '-t' || a.startsWith('--template=')) {
+      const value = a.startsWith('--template=') ? a.slice('--template='.length) : args[++i];
+      if (!value || value.startsWith('-')) {
+        throw new Error('--template requires a repository or local directory.');
+      }
+      template = value;
       continue;
     }
-    if (a === '--ref' || a === '-r') {
-      ref = args[i + 1];
-      i += 1;
+    if (a === '--ref' || a === '-r' || a.startsWith('--ref=')) {
+      const value = a.startsWith('--ref=') ? a.slice('--ref='.length) : args[++i];
+      if (!value || value.startsWith('-')) {
+        throw new Error('--ref requires a branch, tag, or commit.');
+      }
+      ref = value;
       continue;
     }
-    if (!a.startsWith('-') && !projectName) {
+    if (a.startsWith('-')) {
+      throw new Error(`Unknown option: ${a}. Run --help for supported options.`);
+    }
+    if (!projectName) {
       projectName = a;
+    } else {
+      throw new Error(`Unexpected argument: ${a}. Provide one project directory.`);
     }
   }
 
   if (noDb && include.has('db')) {
     throw new Error('--no-db cannot be combined with --include db.');
   }
-  return { projectName, template, ref, force, include, aiTools, databaseSelected, help: false };
+  ref ??= template === defaultTemplate ? templateRef : 'main';
+  return { projectName, template, ref, force, include, aiTools, databaseSelected, minimal, help: false };
 }
 
 function usage() {
@@ -78,7 +106,8 @@ Usage:
 
 Options:
   --template, -t   Template repo (degit format, e.g. org/repo)
-  --ref, -r        Branch/tag/commit (default: main)
+  --ref, -r        Branch/tag/commit (default template: ${templateRef})
+                   Custom templates default to main
   --include, -i    Comma-separated features to include (default: frontend only)
                    Use --include db for database (Drizzle, PGLite, migrations)
   --no-db         Create a project without database support; skip the DB prompt
@@ -86,6 +115,7 @@ Options:
                    claude-code, cursor, codex, github-copilot, gemini-cli,
                    opencode, windsurf, universal, or none
   --force, -f      Overwrite target dir if it exists
+  --minimal       Keep the homepage and counter; remove about/portfolio demos
 
 Examples:
   npx next-fsd my-app
@@ -100,7 +130,7 @@ Environment variables:
 }
 
 function isLikelyLocalPath(p) {
-  return p === '.' || p.startsWith('/') || p.startsWith('./') || p.startsWith('../') || p.startsWith('file:');
+  return p === '.' || path.isAbsolute(p) || p.startsWith('./') || p.startsWith('../') || p.startsWith(`.${path.sep}`) || p.startsWith(`..${path.sep}`) || p.startsWith('file:');
 }
 
 function normalizeLocalPath(p) {
@@ -120,7 +150,7 @@ async function copyDir(sourceDir, targetDir, { force, ignore = [] }) {
   await mkdir(targetDir, { recursive: true });
 
   for (const entry of entries) {
-    if (ignoreSet.has(entry.name)) {
+    if (ignoreSet.has(entry.name) || (entry.name.startsWith('.env.') && entry.name.endsWith('.local'))) {
       continue;
     }
 
@@ -370,7 +400,9 @@ export const Env = createEnv({
       continue;
     }
     const envContent = await readFile(envFile, 'utf8');
-    await writeFile(envFile, envContent.replace(/^[ \t]*(?:#[ \t]*)?(?:export[ \t]+)?DATABASE_URL[ \t]*=.*(?:\r?\n|$)/gm, ''), 'utf8');
+    await writeFile(envFile, envContent
+      .replace(/^[ \t]*(?:#[ \t]*)?(?:export[ \t]+)?DATABASE_URL[ \t]*=.*(?:\r?\n|$)/gm, '')
+      .replace(/^#.*(?:[Dd]atabase|PGLite|pglite-server|DATABASE_URL).*\r?\n?/gm, ''), 'utf8');
   }
 
   const playwrightPath = path.join(root, 'playwright.config.ts');
@@ -384,6 +416,10 @@ export const Env = createEnv({
   const readmePath = path.join(root, 'README.md');
   if (existsSync(readmePath)) {
     let readme = await readFile(readmePath, 'utf8');
+    readme = readme
+      .replace(/<!-- database-only:start -->[\s\S]*?<!-- database-only:end -->\s*/g, '')
+      .replace('The repository includes the full database example.', 'This project runs without a database.')
+      .replace(/^.*Optional Type-safe ORM.*\r?\n/gm, '');
     for (const heading of ['### Set up remote database', '### Change database schema', '### Local Production Build', '#### Database Studio']) {
       const start = readme.indexOf(`${heading}\n`);
       if (start === -1) {
@@ -405,7 +441,7 @@ export const Env = createEnv({
 
 async function main() {
   const options = parseArgs(process.argv);
-  const { help, projectName, template, ref, force } = options;
+  const { help, projectName, template, ref, force, minimal } = options;
 
   if (help || !projectName) {
     // eslint-disable-next-line no-console
@@ -414,7 +450,8 @@ async function main() {
   }
 
   const cwd = process.cwd();
-  const targetDir = path.resolve(cwd, projectName);
+  const sourceDir = isLikelyLocalPath(template) ? path.resolve(cwd, normalizeLocalPath(template)) : undefined;
+  const { targetDir, packageName } = await validateProjectPaths(cwd, projectName, sourceDir);
 
   if (existsSync(targetDir) && !force) {
     throw new Error(`Target already exists: ${targetDir}\nRe-run with --force to overwrite.`);
@@ -431,13 +468,12 @@ async function main() {
     await rm(targetDir, { recursive: true, force: true });
   }
 
-  if (isLikelyLocalPath(template)) {
-    const sourceDir = path.resolve(cwd, normalizeLocalPath(template));
+  if (sourceDir) {
     // eslint-disable-next-line no-console
     console.log(`Using local template: ${sourceDir}\n`);
     await copyDir(sourceDir, targetDir, {
       force,
-      ignore: ['.cursor', '.vscode', 'node_modules', '.git', '.next', 'coverage'],
+      ignore: ['.cursor', '.vscode', 'node_modules', '.git', '.next', 'coverage', 'local.db', 'test-results', 'vitest-test-results'],
     });
   } else {
     const source = `${template}#${ref}`;
@@ -450,7 +486,7 @@ async function main() {
   // Generated apps do not need the scaffolder's source or its package tests.
   await rm(path.join(targetDir, 'packages', 'next-fsd'), { recursive: true, force: true });
 
-  await updatePackageJsonName(targetDir, projectName);
+  await updatePackageJsonName(targetDir, packageName);
 
   // Default: frontend-only. Use --include db for database features.
   if (!include.has('db')) {
@@ -461,6 +497,8 @@ async function main() {
       await refreshDependencyLock(targetDir);
     }
   }
+
+  await configureContent(targetDir, { database: include.has('db'), minimal });
 
   await installAiSkills(targetDir, aiTools);
 

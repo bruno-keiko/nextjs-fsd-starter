@@ -17,13 +17,8 @@ export class RefreshHandler {
     this.setAccessTokenFn = setAccessTokenFn;
   }
 
-  private isServer(): boolean {
-    return typeof window === 'undefined';
-  }
-
   async handleRefreshToken(): Promise<string | null> {
-    // Skip refresh on server-side
-    if (this.isServer()) {
+    if (!this.refreshTokenFn) {
       return null;
     }
 
@@ -36,10 +31,6 @@ export class RefreshHandler {
     this.isRefreshing = true;
 
     try {
-      if (!this.refreshTokenFn) {
-        return null;
-      }
-
       const newToken = await this.refreshTokenFn();
 
       if (newToken) {
@@ -65,22 +56,6 @@ export class RefreshHandler {
   ): Promise<void> {
     if (onUnauthorized) {
       await onUnauthorized(error);
-      return;
-    }
-
-    // Default behavior
-    if (this.isServer()) {
-      // On server, we need to use redirect from next/navigation
-      try {
-        // eslint-disable-next-line ts/no-require-imports -- Load Next.js server APIs only in the server branch.
-        const { redirect } = require('next/navigation');
-        redirect('/auth');
-      } catch {
-        // If redirect fails (e.g., not in a server component), throw the error
-        throw error;
-      }
-    } else {
-      window.location.href = '/auth';
     }
   }
 }

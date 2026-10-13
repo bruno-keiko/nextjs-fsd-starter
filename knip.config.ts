@@ -11,7 +11,7 @@ const config: KnipConfig = {
       ? {
           'packages/next-fsd': {
             entry: ['tests/**/*.test.mjs'],
-            project: ['bin/**/*.mjs', 'tests/**/*.mjs'],
+            project: ['bin/**/*.mjs', 'tests/**/*.mjs', 'scripts/**/*.mjs'],
           },
         }
       : {}),

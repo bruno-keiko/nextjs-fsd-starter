@@ -24,5 +24,7 @@
 
 - When present, `packages/next-fsd/bin/next-fsd.mjs` scaffolds this repo. Changes to template paths or database setup must remain compatible with its frontend-only default and `--include db` variant.
 - The CLI prompts for database support and AI tools in interactive terminals; `--no-db`, `--include db`, and `--ai-tool` provide explicit choices. When the CLI package is present, run its regression tests with `npm test --prefix packages/next-fsd` when changing setup behavior.
+- `--minimal` removes the about/portfolio demo routes. When the CLI package is present, run `npm run test:generated --prefix packages/next-fsd` for changes to generated output; it validates clean installs, static checks, and builds for all four database/demo combinations.
+- Published CLI versions use the matching `next-fsd-v<version>` template tag. Custom templates default to `main`; `--ref` overrides the choice.
 - Generated projects must include `AGENTS.md`, `.agents/skills/feature-sliced-design/`, and `skills-lock.json` so the official guidance and its pinned source travel with the template.
 - Database files and scripts exist in the full template and DB-enabled projects. The frontend-only variant removes them; check the project's `package.json` before using database commands. For DB-enabled projects, `npm run build-local` builds with a temporary in-memory PGlite database.

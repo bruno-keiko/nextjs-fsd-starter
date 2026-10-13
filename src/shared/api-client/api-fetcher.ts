@@ -41,10 +41,6 @@ export class ApiFetcher {
     }
   }
 
-  private isServer(): boolean {
-    return typeof window === 'undefined';
-  }
-
   private async request<T>(
     endpoint: string,
     options: RequestInit,
@@ -53,25 +49,10 @@ export class ApiFetcher {
     const url = `${this.prefix}${endpoint}`;
     const accessToken = await this.tokenManager.getAccessToken();
 
-    // Get organization ID from storage (client-side only)
-    let organizationId: string | undefined;
-    if (!this.isServer()) {
-      try {
-        const storage = localStorage.getItem('organization-storage');
-        if (storage) {
-          const parsed = JSON.parse(storage);
-          organizationId = parsed?.state?.selectedOrganizationId;
-        }
-      } catch {
-        // Ignore errors
-      }
+    const headers = new Headers(options.headers);
+    if (accessToken) {
+      headers.set('Authorization', `Bearer ${accessToken}`);
     }
-
-    const headers: HeadersInit = {
-      ...options.headers,
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...(organizationId ? { 'X-Organization-Id': organizationId } : {}),
-    };
 
     const response = await fetch(url, {
       ...options,
@@ -97,10 +78,8 @@ export class ApiFetcher {
           ? this.shouldRefreshToken(error)
           : true;
 
-        // Only attempt refresh on client-side
         const canRefresh
-          = !this.isServer()
-            && shouldRefresh
+          = shouldRefresh
             && retryCount === 0
             && this.refreshTokenFn;
 
@@ -142,58 +121,32 @@ export class ApiFetcher {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  public async post<T>(
-    endpoint: string,
-    body: any,
-    options: RequestInit = {},
-  ): Promise<T> {
+  private send<T>(method: string, endpoint: string, body: unknown, options: RequestInit): Promise<T> {
+    const headers = new Headers(options.headers);
     const isFormData = body instanceof FormData;
+    if (isFormData) {
+      headers.delete('Content-Type');
+    } else if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
     return this.request<T>(endpoint, {
       ...options,
-      method: 'POST',
-      headers: isFormData
-        ? { ...options.headers }
-        : { 'Content-Type': 'application/json', ...options.headers },
-      body: isFormData ? body : JSON.stringify(body),
-    });
-  }
-
-  public async put<T>(
-    endpoint: string,
-    body: any,
-    options: RequestInit = {},
-  ): Promise<T> {
-    const isFormData = body instanceof FormData;
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PUT',
-      headers: isFormData
-        ? options.headers
-        : { 'Content-Type': 'application/json', ...options.headers },
-      body: isFormData ? body : JSON.stringify(body),
-    });
-  }
-
-  public async patch<T>(
-    endpoint: string,
-    body: any,
-    options: RequestInit = {},
-  ): Promise<T> {
-    const isFormData = body instanceof FormData;
-    const headers = isFormData
-      ? (() => {
-          const { 'Content-Type': _, ...restHeaders }
-            = (options.headers as Record<string, string>) || {};
-          return restHeaders;
-        })()
-      : { 'Content-Type': 'application/json', ...options.headers };
-
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PATCH',
+      method,
       headers,
       body: isFormData ? body : JSON.stringify(body),
     });
+  }
+
+  public post<T>(endpoint: string, body: unknown, options: RequestInit = {}): Promise<T> {
+    return this.send<T>('POST', endpoint, body, options);
+  }
+
+  public put<T>(endpoint: string, body: unknown, options: RequestInit = {}): Promise<T> {
+    return this.send<T>('PUT', endpoint, body, options);
+  }
+
+  public patch<T>(endpoint: string, body: unknown, options: RequestInit = {}): Promise<T> {
+    return this.send<T>('PATCH', endpoint, body, options);
   }
 
   public async delete<T>(
