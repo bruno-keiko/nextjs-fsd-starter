@@ -5,7 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import degit from 'degit';
-import { chooseSetup, installAiSkills, parseAiTools } from './setup.mjs';
+import { chooseSetup, installAiSkills, parseAiTools, refreshDependencyLock } from './setup.mjs';
 
 function parseArgs(argv) {
   const args = argv.slice(2);
@@ -154,7 +154,9 @@ async function updatePackageJsonName(targetDir, projectName) {
 }
 
 async function writeProjectPackage(targetDir, pkg) {
-  await writeFile(path.join(targetDir, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
+  const { name, private: privateProject, ...rest } = pkg;
+  const projectPkg = { name, ...(privateProject === undefined ? {} : { private: privateProject }), ...rest };
+  await writeFile(path.join(targetDir, 'package.json'), `${JSON.stringify(projectPkg, null, 2)}\n`, 'utf8');
   const lockPath = path.join(targetDir, 'package-lock.json');
   if (existsSync(lockPath)) {
     const lock = JSON.parse(await readFile(lockPath, 'utf8'));
@@ -200,16 +202,17 @@ async function stripDb(targetDir) {
   await writeFile(
     counterStorePath,
     `// In-memory counter store for frontend-only projects (no database)
+import type { Counter } from './index';
 
-const store = new Map<number, number>();
+const store = new Map<number, Counter>();
 
 export function getCount(id: number): number {
-  return store.get(id) ?? 0;
+  return store.get(id)?.count ?? 0;
 }
 
 export function increment(id: number, delta: number): number {
-  const next = (store.get(id) ?? 0) + delta;
-  store.set(id, next);
+  const next = getCount(id) + delta;
+  store.set(id, { id, count: next });
   return next;
 }
 `,
@@ -228,7 +231,7 @@ export function increment(id: number, delta: number): number {
 
   await writeFile(
     path.join(root, 'src', 'entities', 'counter', 'index.server.ts'),
-    'export { getCount, increment } from \'./model/counter-store\';\nexport { CurrentCount } from \'./ui\';\n',
+    'export { increment } from \'./model/counter-store\';\nexport { CurrentCount } from \'./ui\';\n',
     'utf8',
   );
 
@@ -240,9 +243,9 @@ export function increment(id: number, delta: number): number {
     `import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as z from 'zod';
-import { logger } from '@/shared/lib';
 import { CounterValidation } from '@/entities/counter';
 import { increment } from '@/entities/counter/index.server';
+import { logger } from '@/shared/lib';
 
 export const PUT = async (request: Request) => {
   const json = await request.json();
@@ -328,7 +331,7 @@ export const Env = createEnv({
   const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
 
   const dbDeps = ['drizzle-orm', 'pg'];
-  const dbDevDeps = ['drizzle-kit', '@electric-sql/pglite-socket', '@types/pg'];
+  const dbDevDeps = ['drizzle-kit', '@electric-sql/pglite-socket', '@types/pg', 'dotenv-cli', 'npm-run-all'];
   if (pkg.dependencies) {
     dbDeps.forEach(d => delete pkg.dependencies[d]);
   }
@@ -394,7 +397,8 @@ export const Env = createEnv({
       .replace(' (includes full database setup)', '')
       .replace(/^During the build process, database migrations.*\r?\n/gm, '')
       .replace(/For your information, the project is already pre-configured with a local database using PGlite\. No extra setup is required to run the project locally\./g, 'This project runs without a database; the demo counter uses an in-memory store.')
-      .replace(/^- .*?(?:Type-safe ORM|Offline and local development database|Database exploration).*\r?\n/gm, '');
+      .replace(/^- .*?(?:Type-safe ORM|Offline and local development database|Database exploration).*\r?\n/gm, '')
+      .replace(/\n{3,}/g, '\n\n');
     await writeFile(readmePath, readme, 'utf8');
   }
 }
@@ -433,7 +437,7 @@ async function main() {
     console.log(`Using local template: ${sourceDir}\n`);
     await copyDir(sourceDir, targetDir, {
       force,
-      ignore: ['.cursor', '.vscode', 'node_modules', '.git', '.next', 'coverage', 'packages'],
+      ignore: ['.cursor', '.vscode', 'node_modules', '.git', '.next', 'coverage'],
     });
   } else {
     const source = `${template}#${ref}`;
@@ -443,6 +447,9 @@ async function main() {
     await emitter.clone(targetDir);
   }
 
+  // Generated apps do not need the scaffolder's source or its package tests.
+  await rm(path.join(targetDir, 'packages', 'next-fsd'), { recursive: true, force: true });
+
   await updatePackageJsonName(targetDir, projectName);
 
   // Default: frontend-only. Use --include db for database features.
@@ -450,6 +457,9 @@ async function main() {
     // eslint-disable-next-line no-console
     console.log('Configuring frontend-only (no database)...');
     await stripDb(targetDir);
+    if (existsSync(path.join(targetDir, 'package-lock.json'))) {
+      await refreshDependencyLock(targetDir);
+    }
   }
 
   await installAiSkills(targetDir, aiTools);

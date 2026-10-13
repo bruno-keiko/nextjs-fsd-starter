@@ -19,9 +19,10 @@ export const BaseTemplate = (props: {
               </h1>
             </div>
 
-            {props.rightNav && (
+            {(props.leftNav || props.rightNav) && (
               <nav className="flex items-center">
                 <ul className="flex items-center gap-4">
+                  {props.leftNav}
                   {props.rightNav}
                 </ul>
               </nav>

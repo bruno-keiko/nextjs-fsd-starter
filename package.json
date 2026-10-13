@@ -18,6 +18,7 @@
     "check:fsd": "steiger src",
     "check:deps": "knip",
     "check:i18n": "i18n-check -l src/shared/config/locales -s en -u src -f next-intl",
+    "hooks:install": "lefthook install",
     "commit": "commit",
     "test": "vitest run",
     "test:e2e": "playwright test",

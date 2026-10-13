@@ -223,6 +223,13 @@ There is no need to restart the Next.js server for the changes to take effect.
 
 ### Commit Message Format
 
+For a newly scaffolded folder, initialize Git and install the hooks before committing:
+
+```shell
+git init
+npm run hooks:install
+```
+
 Lefthook runs staged-file linting, TypeScript checks, and the full FSD architecture check before commits. Architecture errors block the commit; warnings remain advisory. The same architecture check also runs in CI. Run it manually with `npm run check:fsd`.
 
 The check uses [Steiger and the official FSD plugin](https://github.com/feature-sliced/steiger). `steiger.config.mjs` starts from the recommended rules, allows Next.js route folder names, and treats the existing Shared `utils`/`types` segment names as warnings.

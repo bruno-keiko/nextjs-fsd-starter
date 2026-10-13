@@ -1,12 +1,11 @@
 {
   "RootLayout": {
     "home_link": "Accueil",
-    "about_link": "A propos",
+    "about_link": "À propos",
     "counter_link": "Compteur",
     "portfolio_link": "Portfolio"
   },
   "BaseTemplate": {
-    "description": "Code de démarrage pour Next.js avec Tailwind CSS",
     "footer_text": "© {year} {name}. Fait avec <author></author>."
   },
   "Index": {
@@ -16,8 +15,7 @@
   },
   "Counter": {
     "meta_title": "Compteur",
-    "meta_description": "Un exemple d'opération DB",
-    "security_powered_by": "Sécurité, détection de bot et rate limiting propulsés par"
+    "meta_description": "Un exemple d'opération DB"
   },
   "CounterForm": {
     "presentation": "Le compteur est stocké dans la base de données et incrémenté par la valeur que vous fournissez.",
@@ -31,27 +29,18 @@
   "About": {
     "meta_title": "A propos",
     "meta_description": "A propos description",
-    "about_paragraph": "Bienvenue sur notre page À propos ! Nous sommes une équipe de passionnés et dévoués à la création de logiciels.",
-    "translation_powered_by": "Traduction propulsée par"
+    "about_paragraph": "Bienvenue sur notre page À propos ! Nous sommes une équipe de passionnés et dévoués à la création de logiciels."
   },
   "Portfolio": {
     "meta_title": "Portfolio",
     "meta_description": "Bienvenue sur la page de mon portfolio !",
     "presentation": "Bienvenue sur ma page portfolio ! Vous trouverez ici une collection soigneusement organisée de mon travail et de mes réalisations. À travers ce portfolio, je mets en valeur mon expertise, ma créativité et la valeur que je peux apporter à vos projets.",
-    "portfolio_name": "Portfolio {name}",
-    "error_reporting_powered_by": "Rapport d'erreur propulsé par",
-    "coverage_powered_by": "Couverture de code propulsée par"
+    "portfolio_name": "Portfolio {name}"
   },
   "PortfolioSlug": {
     "meta_title": "Portfolio {slug}",
     "meta_description": "Description du Portfolio {slug}",
     "header": "Portfolio {slug}",
-    "content": "Créé un ensemble de matériel promotionnel et d'éléments de marquage pour un événement d'entreprise. Conçu un thème visuellement unifié, englobant un logo, des affiches, des bannières et des actifs numériques. Intégrer l'identité de marque du client tout en l'insufflant à une approche contemporaine et innovante.",
-    "code_review_powered_by": "Code review propulsé par"
-  },
-  "Dashboard": {
-    "meta_title": "Tableau de bord",
-    "hello_message": "Bonjour {email}!",
-    "alternative_message": "Besoin de fonctionnalités avancées ? Consultez la <url></url>."
+    "content": "Créé un ensemble de matériel promotionnel et d'éléments de marquage pour un événement d'entreprise. Conçu un thème visuellement unifié, englobant un logo, des affiches, des bannières et des actifs numériques. Intégrer l'identité de marque du client tout en l'insufflant à une approche contemporaine et innovante."
   }
 }

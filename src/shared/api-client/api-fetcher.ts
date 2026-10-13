@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { ApiFetcherConfig, CustomError } from './types';
-import { TokenManager } from './token-manager';
+import type { ApiFetcherConfig, CustomError } from './types';
 import { RefreshHandler } from './refresh-handler';
+import { TokenManager } from './token-manager';
 
 /**
  * Main API Fetcher class for making HTTP requests with automatic token management
@@ -20,7 +19,7 @@ export class ApiFetcher {
       this.tokenManager = new TokenManager();
       this.refreshHandler = new RefreshHandler(
         undefined,
-        this.tokenManager.setAccessToken.bind(this.tokenManager)
+        this.tokenManager.setAccessToken.bind(this.tokenManager),
       );
     } else {
       this.prefix = config.prefix;
@@ -32,12 +31,12 @@ export class ApiFetcher {
         config.getAccessToken,
         config.getRefreshToken,
         config.setAccessToken,
-        config.setRefreshToken
+        config.setRefreshToken,
       );
 
       this.refreshHandler = new RefreshHandler(
         config.refreshTokenFn,
-        this.tokenManager.setAccessToken.bind(this.tokenManager)
+        this.tokenManager.setAccessToken.bind(this.tokenManager),
       );
     }
   }
@@ -49,7 +48,7 @@ export class ApiFetcher {
   private async request<T>(
     endpoint: string,
     options: RequestInit,
-    retryCount = 0
+    retryCount = 0,
   ): Promise<T> {
     const url = `${this.prefix}${endpoint}`;
     const accessToken = await this.tokenManager.getAccessToken();
@@ -99,11 +98,11 @@ export class ApiFetcher {
           : true;
 
         // Only attempt refresh on client-side
-        const canRefresh =
-          !this.isServer() &&
-          shouldRefresh &&
-          retryCount === 0 &&
-          this.refreshTokenFn;
+        const canRefresh
+          = !this.isServer()
+            && shouldRefresh
+            && retryCount === 0
+            && this.refreshTokenFn;
 
         if (canRefresh) {
           try {
@@ -115,7 +114,7 @@ export class ApiFetcher {
           } catch {
             await this.refreshHandler.handleUnauthorized(
               error,
-              this.onUnauthorized
+              this.onUnauthorized,
             );
             throw error;
           }
@@ -123,7 +122,7 @@ export class ApiFetcher {
 
         await this.refreshHandler.handleUnauthorized(
           error,
-          this.onUnauthorized
+          this.onUnauthorized,
         );
       }
 
@@ -146,7 +145,7 @@ export class ApiFetcher {
   public async post<T>(
     endpoint: string,
     body: any,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const isFormData = body instanceof FormData;
     return this.request<T>(endpoint, {
@@ -162,7 +161,7 @@ export class ApiFetcher {
   public async put<T>(
     endpoint: string,
     body: any,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const isFormData = body instanceof FormData;
     return this.request<T>(endpoint, {
@@ -178,13 +177,13 @@ export class ApiFetcher {
   public async patch<T>(
     endpoint: string,
     body: any,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const isFormData = body instanceof FormData;
     const headers = isFormData
       ? (() => {
-          const { 'Content-Type': _, ...restHeaders } =
-            (options.headers as Record<string, string>) || {};
+          const { 'Content-Type': _, ...restHeaders }
+            = (options.headers as Record<string, string>) || {};
           return restHeaders;
         })()
       : { 'Content-Type': 'application/json', ...options.headers };
@@ -199,7 +198,7 @@ export class ApiFetcher {
 
   public async delete<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }

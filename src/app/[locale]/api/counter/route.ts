@@ -2,8 +2,8 @@ import { sql } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as z from 'zod';
-import { db, logger } from '@/shared/lib';
 import { counterSchema, CounterValidation } from '@/entities/counter';
+import { db, logger } from '@/shared/lib';
 
 export const PUT = async (request: Request) => {
   const json = await request.json();

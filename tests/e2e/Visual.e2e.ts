@@ -6,7 +6,7 @@ test.describe('Visual testing', () => {
       await page.goto('/');
 
       await expect(
-        page.getByRole('heading', { name: 'Boilerplate Code for Your Next.js Project with Tailwind CSS' }),
+        page.getByRole('heading', { name: 'Next.js Starter with Feature-Sliced Design' }),
       ).toBeVisible();
 
       await takeSnapshot(page, testInfo);
@@ -46,7 +46,7 @@ test.describe('Visual testing', () => {
       await page.goto('/fr');
 
       await expect(
-        page.getByRole('heading', { name: 'Code de démarrage pour Next.js avec Tailwind CSS' }),
+        page.getByText('Bienvenue ! Ce starter est configuré', { exact: false }),
       ).toBeVisible();
 
       await takeSnapshot(page, testInfo);

@@ -6,7 +6,7 @@ export type CustomError = Error & {
   url?: string;
 };
 
-export interface ApiFetcherConfig {
+export type ApiFetcherConfig = {
   prefix: string;
   onUnauthorized?: (error: CustomError) => void | Promise<void>;
   refreshTokenFn?: () => Promise<string | null>;
@@ -15,4 +15,4 @@ export interface ApiFetcherConfig {
   getRefreshToken?: () => Promise<string | undefined>;
   setAccessToken?: (token: string) => Promise<void>;
   setRefreshToken?: (token: string) => Promise<void>;
-}
+};

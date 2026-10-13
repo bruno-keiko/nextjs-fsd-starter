@@ -18,6 +18,7 @@ const tools = [
 
 const aliases = { claude: 'claude-code', copilot: 'github-copilot', gemini: 'gemini-cli' };
 const skillsPackage = 'skills@1.7.2';
+const npmPackage = 'npm@10.9.9';
 
 export function parseAiTools(value) {
   const ids = value.split(',').map(item => item.trim().toLowerCase());
@@ -86,9 +87,9 @@ export async function chooseSetup({ include, databaseSelected, aiTools }) {
   }
 }
 
-function runSkills(args, targetDir) {
+function runProjectCommand(command, args, targetDir) {
   return new Promise((resolve, reject) => {
-    const child = spawn('npx', ['--yes', skillsPackage, ...args], {
+    const child = spawn(command, args, {
       cwd: targetDir,
       stdio: 'inherit',
     });
@@ -97,10 +98,21 @@ function runSkills(args, targetDir) {
       if (code === 0) {
         resolve();
       } else {
-        reject(new Error(`Skill installer ${signal ? `stopped by ${signal}` : `exited with code ${code}`}.`));
+        reject(new Error(`${command} ${signal ? `stopped by ${signal}` : `exited with code ${code}`}.`));
       }
     });
   });
+}
+
+export async function refreshDependencyLock(targetDir) {
+  const args = ['--yes', npmPackage, 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'];
+  process.stdout.write('\nUpdating the dependency lockfile after removing database support...\n');
+  try {
+    // Use the same npm major as Node 22 CI; npm 11.6 drops a required optional-peer lock entry.
+    await runProjectCommand('npx', args, targetDir);
+  } catch (error) {
+    throw new Error(`Dependency lockfile setup failed. The generated project is still available at ${targetDir}.\nRetry inside it: npx ${args.join(' ')}`, { cause: error });
+  }
 }
 
 export async function installAiSkills(targetDir, selected) {
@@ -121,7 +133,7 @@ export async function installAiSkills(targetDir, selected) {
   const args = ['add', './.agents/skills', '--skill', 'feature-sliced-design', '--agent', ...selected, '--copy', '--yes'];
   process.stdout.write(`\nSetting up the official FSD skill for ${selected.map(id => tools.find(tool => tool.id === id).label).join(', ')}...\n`);
   try {
-    await runSkills(args, targetDir);
+    await runProjectCommand('npx', ['--yes', skillsPackage, ...args], targetDir);
   } catch (error) {
     throw new Error(`AI-tool setup failed. The generated project is still available at ${targetDir}.\nRetry inside it: npx ${skillsPackage} ${args.join(' ')}`, { cause: error });
   } finally {

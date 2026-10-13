@@ -21,6 +21,8 @@ After scaffolding, the CLI runs `npx skills@1.7.2` against the bundled skill to 
 
 Choosing no database removes DB code, packages, scripts, environment settings, and database setup sections from the generated README. The demo counter uses an in-memory store, and Playwright starts the app without a database server.
 
+Frontend-only setup refreshes the copied dependency lockfile using `npx --yes npm@10.9.9 install --package-lock-only --ignore-scripts`, so clean installs omit DB packages too. The pinned npm version keeps the lockfile compatible with Node 22 CI. This step needs npm registry access or cached dependencies; it does not install the app's dependencies or run package scripts. The scaffolder's own package is excluded from generated apps.
+
 ## Options
 
 ```bash

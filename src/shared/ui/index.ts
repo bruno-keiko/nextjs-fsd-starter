@@ -1,7 +1,7 @@
-export { DemoBadge } from './demo-badge';
-export { DemoBanner } from './demo-banner';
-export { LocaleSwitcher } from './locale-switcher';
-export { Hello } from './hello';
-export { Button, buttonVariants } from './button';
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './card';
 export { Badge, badgeVariants } from './badge';
+export type { BadgeProps } from './badge';
+export { Button, buttonVariants } from './button';
+export type { ButtonProps } from './button';
+export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './card';
+export { DemoBadge } from './demo-badge';
+export { LocaleSwitcher } from './locale-switcher';

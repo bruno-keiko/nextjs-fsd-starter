@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-import { CustomError } from './types';
+import type { CustomError } from './types';
 
 /**
  * Handles token refresh logic with queue management
@@ -12,7 +11,7 @@ export class RefreshHandler {
 
   constructor(
     refreshTokenFn: (() => Promise<string | null>) | undefined,
-    setAccessTokenFn: (token: string) => Promise<void>
+    setAccessTokenFn: (token: string) => Promise<void>,
   ) {
     this.refreshTokenFn = refreshTokenFn;
     this.setAccessTokenFn = setAccessTokenFn;
@@ -29,7 +28,7 @@ export class RefreshHandler {
     }
 
     if (this.isRefreshing) {
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         this.refreshQueue.push(resolve);
       });
     }
@@ -62,7 +61,7 @@ export class RefreshHandler {
 
   async handleUnauthorized(
     error: CustomError,
-    onUnauthorized?: (error: CustomError) => void | Promise<void>
+    onUnauthorized?: (error: CustomError) => void | Promise<void>,
   ): Promise<void> {
     if (onUnauthorized) {
       await onUnauthorized(error);
@@ -73,6 +72,7 @@ export class RefreshHandler {
     if (this.isServer()) {
       // On server, we need to use redirect from next/navigation
       try {
+        // eslint-disable-next-line ts/no-require-imports -- Load Next.js server APIs only in the server branch.
         const { redirect } = require('next/navigation');
         redirect('/auth');
       } catch {

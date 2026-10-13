@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiFetcher } from '../api-fetcher';
 
 // Create mock functions
@@ -14,7 +13,7 @@ vi.mock('../token-manager', () => ({
     this: any,
     getAccess?: any,
     getRefresh?: any,
-    setAccess?: any
+    setAccess?: any,
   ) {
     this.getAccessToken = getAccess || mockGetAccessToken;
     this.setAccessToken = setAccess || mockSetAccessToken;
@@ -42,9 +41,9 @@ describe('ApiFetcher', () => {
     mockHandleRefreshToken.mockResolvedValue(null);
     mockHandleUnauthorized.mockResolvedValue(undefined);
 
-    // Mock global fetch
+    // Mock globalThis fetch
     mockFetch = vi.fn();
-    global.fetch = mockFetch;
+    globalThis.fetch = mockFetch;
   });
 
   afterEach(() => {
@@ -54,6 +53,7 @@ describe('ApiFetcher', () => {
   describe('Constructor', () => {
     it('should initialize with string config', () => {
       fetcher = new ApiFetcher('https://api.example.com');
+
       expect(fetcher).toBeDefined();
     });
 
@@ -70,6 +70,7 @@ describe('ApiFetcher', () => {
       };
 
       fetcher = new ApiFetcher(config);
+
       expect(fetcher).toBeDefined();
     });
   });
@@ -138,7 +139,7 @@ describe('ApiFetcher', () => {
         method: 'GET',
         headers: {
           'X-Custom-Header': 'value',
-          Authorization: 'Bearer mock-access-token',
+          'Authorization': 'Bearer mock-access-token',
         },
       });
     });
@@ -164,7 +165,7 @@ describe('ApiFetcher', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer mock-access-token',
+          'Authorization': 'Bearer mock-access-token',
         },
         body: JSON.stringify(postData),
       });
@@ -214,10 +215,10 @@ describe('ApiFetcher', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'Bearer mock-access-token',
+            'Authorization': 'Bearer mock-access-token',
           },
           body: JSON.stringify(putData),
-        }
+        },
       );
       expect(result).toEqual(mockData);
     });
@@ -233,6 +234,7 @@ describe('ApiFetcher', () => {
       await fetcher.put('/users/1', formData);
 
       const call = mockFetch.mock.calls[0];
+
       expect(call[1].body).toBe(formData);
       expect(call[1].headers.Authorization).toBe('Bearer mock-access-token');
     });
@@ -260,10 +262,10 @@ describe('ApiFetcher', () => {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'Bearer mock-access-token',
+            'Authorization': 'Bearer mock-access-token',
           },
           body: JSON.stringify(patchData),
-        }
+        },
       );
       expect(result).toEqual(mockData);
     });
@@ -290,7 +292,7 @@ describe('ApiFetcher', () => {
           headers: {
             Authorization: 'Bearer mock-access-token',
           },
-        }
+        },
       );
       expect(result).toEqual({ success: true });
     });
@@ -323,6 +325,7 @@ describe('ApiFetcher', () => {
 
       try {
         await fetcher.get('/error');
+
         expect.fail('Should have thrown an error');
       } catch (error: any) {
         expect(error.status).toBe(500);
@@ -334,11 +337,11 @@ describe('ApiFetcher', () => {
   describe('Token refresh on 401', () => {
     beforeEach(() => {
       // Mock window to simulate client-side
-      global.window = {} as any;
+      globalThis.window = {} as any;
     });
 
     afterEach(() => {
-      delete (global as any).window;
+      delete (globalThis as any).window;
     });
 
     it('should retry request after successful token refresh', async () => {
@@ -439,7 +442,7 @@ describe('ApiFetcher', () => {
     });
 
     it('should not refresh token on server-side', async () => {
-      delete (global as any).window;
+      delete (globalThis as any).window;
 
       const refreshTokenFn = vi.fn();
       fetcher = new ApiFetcher({

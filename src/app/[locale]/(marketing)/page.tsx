@@ -101,7 +101,7 @@ export default async function Index(props: IIndexProps) {
           </Link>
         </div>
         <div className="pt-4">
-          <code className="bg-muted rounded-md px-4 py-2 text-sm">
+          <code className="rounded-md bg-[hsl(var(--muted))] px-4 py-2 text-sm">
             npx next-fsd my-app
           </code>
         </div>
@@ -134,7 +134,7 @@ export default async function Index(props: IIndexProps) {
       </section>
 
       {/* Quick Start Section */}
-      <section className="bg-muted/50 rounded-lg border p-8">
+      <section className="rounded-lg border bg-[hsl(var(--muted))]/50 p-8">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-[hsl(var(--primary))]" />
@@ -143,19 +143,19 @@ export default async function Index(props: IIndexProps) {
           <div className="space-y-2 font-mono text-sm">
             <div className="flex items-center gap-2">
               <Badge variant="outline">1</Badge>
-              <code className="bg-background rounded px-2 py-1">npx next-fsd my-app</code>
+              <code className="rounded bg-[hsl(var(--background))] px-2 py-1">npx next-fsd my-app</code>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">2</Badge>
-              <code className="bg-background rounded px-2 py-1">cd my-app</code>
+              <code className="rounded bg-[hsl(var(--background))] px-2 py-1">cd my-app</code>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">3</Badge>
-              <code className="bg-background rounded px-2 py-1">npm install</code>
+              <code className="rounded bg-[hsl(var(--background))] px-2 py-1">npm install</code>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">4</Badge>
-              <code className="bg-background rounded px-2 py-1">npm run dev</code>
+              <code className="rounded bg-[hsl(var(--background))] px-2 py-1">npm run dev</code>
             </div>
           </div>
         </div>

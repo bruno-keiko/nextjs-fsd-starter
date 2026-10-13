@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-
 /**
  * Token management utilities for both client and server environments
  */
@@ -13,7 +11,7 @@ export class TokenManager {
     getAccessToken?: () => Promise<string | undefined>,
     getRefreshToken?: () => Promise<string | undefined>,
     setAccessToken?: (token: string) => Promise<void>,
-    setRefreshToken?: (token: string) => Promise<void>
+    setRefreshToken?: (token: string) => Promise<void>,
   ) {
     this.getAccessTokenFn = getAccessToken;
     this.getRefreshTokenFn = getRefreshToken;
@@ -32,6 +30,7 @@ export class TokenManager {
 
     if (this.isServer()) {
       try {
+        // eslint-disable-next-line ts/no-require-imports -- Load Next.js server APIs only in the server branch.
         const { cookies } = require('next/headers');
         const cookieStore = await cookies();
         return cookieStore.get('accessToken')?.value;
@@ -57,6 +56,7 @@ export class TokenManager {
 
     if (this.isServer()) {
       try {
+        // eslint-disable-next-line ts/no-require-imports -- Load Next.js server APIs only in the server branch.
         const { cookies } = require('next/headers');
         const cookieStore = await cookies();
         return cookieStore.get('refreshToken')?.value;

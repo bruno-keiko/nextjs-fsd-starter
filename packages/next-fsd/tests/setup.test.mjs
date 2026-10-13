@@ -24,6 +24,8 @@ async function fixture(t) {
     'skills-lock.json': await readFile(path.join(repo, 'skills-lock.json'), 'utf8'),
     'AGENTS.md': '# Template instructions\n',
     'README.md': await readFile(path.join(repo, 'README.md'), 'utf8'),
+    '.github/workflows/CI.yml': await readFile(path.join(repo, '.github/workflows/CI.yml'), 'utf8'),
+    'packages/next-fsd/package.json': '{"name":"next-fsd"}\n',
     'CLAUDE.md': '# Existing team guidance\n',
     '.env': 'DATABASE_URL=postgres://localhost/example\nNEXT_PUBLIC_APP_URL=http://localhost:3000\n',
     '.env.production': '# DATABASE_URL=postgres://example/production\nNEXT_PUBLIC_APP_URL=https://example.test\n',
@@ -51,6 +53,10 @@ async function fixture(t) {
 const fs = require('node:fs');
 const path = require('node:path');
 const args = process.argv.slice(2);
+if (args[1] === 'npm@10.9.9') {
+  fs.writeFileSync(process.env.NEXT_FSD_TEST_LOCK_RECORD, JSON.stringify({ args, cwd: process.cwd() }));
+  process.exit(process.env.NEXT_FSD_TEST_LOCK_FAIL ? 2 : 0);
+}
 fs.writeFileSync(process.env.NEXT_FSD_TEST_RECORD, JSON.stringify({ args, cwd: process.cwd() }));
 fs.writeFileSync('skills-lock.json', JSON.stringify({ skills: { local: true } }));
 if (process.env.NEXT_FSD_TEST_INSTALL_FAIL) process.exit(2);
@@ -74,7 +80,8 @@ for (const tool of selected) {
     cwd,
     target: path.join(cwd, 'app'),
     record: path.join(root, 'installer.json'),
-    env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, NEXT_FSD_TEST_RECORD: path.join(root, 'installer.json') },
+    lockRecord: path.join(root, 'lock-updater.json'),
+    env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, NEXT_FSD_TEST_RECORD: path.join(root, 'installer.json'), NEXT_FSD_TEST_LOCK_RECORD: path.join(root, 'lock-updater.json') },
   };
 }
 
@@ -140,16 +147,25 @@ test('non-interactive defaults create a project without DB support and keep the 
   assert.equal(pkg.dependencies['drizzle-orm'], undefined);
   assert.equal(pkg.dependencies.pg, undefined);
   assert.equal(pkg.devDependencies['drizzle-kit'], undefined);
+  assert.equal(pkg.devDependencies['dotenv-cli'], undefined);
+  assert.equal(pkg.devDependencies['npm-run-all'], undefined);
   assert.equal(pkg.scripts['db-server:file'], undefined);
   assert.equal(pkg.scripts.dev, 'next dev');
   const lock = JSON.parse(await readFile(path.join(f.target, 'package-lock.json'), 'utf8'));
   assert.equal(lock.name, 'app');
   assert.deepEqual(lock.packages[''].dependencies, pkg.dependencies);
   assert.deepEqual(lock.packages[''].devDependencies, pkg.devDependencies);
+  const lockCommand = JSON.parse(await readFile(f.lockRecord, 'utf8'));
+  assert.equal(lockCommand.cwd, f.target);
+  assert.deepEqual(lockCommand.args, ['--yes', 'npm@10.9.9', 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund']);
   assert.equal(await exists(path.join(f.target, 'drizzle.config.ts')), false);
   assert.equal(await exists(path.join(f.target, 'src/entities/counter/model/schema.ts')), false);
   assert.equal(await exists(path.join(f.target, 'src/entities/counter/model/counter-store.ts')), true);
   assert.equal(await exists(path.join(f.target, 'src/shared/lib/counter-store.ts')), false);
+  assert.equal(await exists(path.join(f.target, 'packages/next-fsd/package.json')), false);
+  const workflow = await readFile(path.join(f.target, '.github/workflows/CI.yml'), 'utf8');
+  assert.match(workflow, /if: hashFiles\('packages\/next-fsd\/package\.json'\) != ''/);
+  assert.ok(pkg.scripts['build-local']);
   for (const name of ['.env', '.env.production']) {
     assert.doesNotMatch(await readFile(path.join(f.target, name), 'utf8'), /DATABASE_URL/);
   }
@@ -172,6 +188,17 @@ test('--include db preserves DB support and none skips the external installer', 
   assert.match(await readFile(path.join(f.target, '.env'), 'utf8'), /DATABASE_URL/);
   assert.match(await readFile(path.join(f.target, 'playwright.config.ts'), 'utf8'), /db-server/);
   assert.equal(await exists(f.record), false);
+  assert.equal(await exists(f.lockRecord), false);
+});
+
+test('lockfile update failures preserve the project and explain how to retry', async (t) => {
+  const f = await fixture(t);
+  const result = await runCli(f, ['--no-db', '--ai-tool', 'none'], [], { NEXT_FSD_TEST_LOCK_FAIL: '1' });
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Dependency lockfile setup failed[\s\S]*Retry inside it: npx --yes npm@10\.9\.9 install --package-lock-only/);
+  assert.equal(await exists(path.join(f.target, 'package.json')), true);
+  assert.equal(await exists(f.record), false);
+  assert.doesNotMatch(result.stdout, /Done\./);
 });
 
 test('multiple AI tools receive their skill setup and context imports while retaining team instructions', async (t) => {

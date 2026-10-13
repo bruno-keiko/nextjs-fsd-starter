@@ -22,7 +22,7 @@
    ```bash
    npm login
    ```
-   
+
    If using a granular access token instead of 2FA:
    ```bash
    npm login --auth-type=legacy
@@ -61,7 +61,7 @@
    ```bash
    npm publish
    ```
-   
+
    For a scoped package (if name is taken):
    ```bash
    npm publish --access public

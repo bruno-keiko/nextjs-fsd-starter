@@ -1,4 +1,6 @@
 import type { StorybookConfig } from '@storybook/nextjs-vite';
+import { mergeConfig } from 'vite';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 const config: StorybookConfig = {
   stories: [
@@ -21,6 +23,11 @@ const config: StorybookConfig = {
   },
   core: {
     disableTelemetry: true,
+  },
+  viteFinal(config) {
+    return mergeConfig(config, {
+      plugins: [tsconfigPaths({ projects: ['./tsconfig.test.json'] })],
+    });
   },
 };
 export default config;

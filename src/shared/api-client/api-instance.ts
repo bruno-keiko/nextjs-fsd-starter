@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+import type { CustomError } from './types';
 import { ApiFetcher } from './api-fetcher';
-import { BASE_URL, CustomError } from './types';
+import { BASE_URL } from './types';
 
 /**
  * Configured API instance with smart defaults for token refresh and error handling
@@ -11,13 +11,17 @@ export const api = new ApiFetcher({
   // Auto-refresh tokens (client-side only)
   refreshTokenFn: async () => {
     // Only runs on client
-    if (typeof window === 'undefined') return null;
+    if (typeof window === 'undefined') {
+      return null;
+    }
 
     try {
       const Cookies = (await import('js-cookie')).default;
       const refreshToken = Cookies.get('refreshToken');
 
-      if (!refreshToken) return null;
+      if (!refreshToken) {
+        return null;
+      }
 
       const response = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
@@ -25,10 +29,12 @@ export const api = new ApiFetcher({
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        return null;
+      }
 
-      const data: { access_token: string; refresh_token: string } =
-        await response.json();
+      const data: { access_token: string; refresh_token: string }
+        = await response.json();
 
       if (data.access_token) {
         Cookies.set('accessToken', data.access_token);
@@ -54,7 +60,7 @@ export const api = new ApiFetcher({
   },
 
   // Handle unauthorized
-  onUnauthorized: async error => {
+  onUnauthorized: async (error) => {
     console.error('Unauthorized:', error.status);
 
     // Don't redirect if already on login/register page or if it's a login/register request
@@ -67,6 +73,7 @@ export const api = new ApiFetcher({
     if (typeof window === 'undefined') {
       // Server-side: use Next.js redirect
       try {
+        // eslint-disable-next-line ts/no-require-imports -- Load Next.js server APIs only in the server branch.
         const { redirect } = require('next/navigation');
         redirect('/login');
       } catch {
@@ -76,8 +83,8 @@ export const api = new ApiFetcher({
     } else {
       // Client-side: only redirect if not already on login page
       if (
-        window.location.pathname !== '/login' &&
-        window.location.pathname !== '/register'
+        window.location.pathname !== '/login'
+        && window.location.pathname !== '/register'
       ) {
         const Cookies = (await import('js-cookie')).default;
         Cookies.remove('accessToken');

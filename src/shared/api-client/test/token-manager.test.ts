@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TokenManager } from '../token-manager';
 
 vi.mock('next/headers', () => ({
@@ -16,7 +15,7 @@ vi.mock('js-cookie', () => ({
 describe('TokenManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete (global as any).window;
+    delete (globalThis as any).window;
   });
 
   afterEach(() => {
@@ -47,7 +46,7 @@ describe('TokenManager', () => {
         undefined,
         undefined,
         mockSetAccess,
-        mockSetRefresh
+        mockSetRefresh,
       );
       await manager.setAccessToken('new-access-token');
       await manager.setRefreshToken('new-refresh-token');

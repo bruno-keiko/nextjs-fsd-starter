@@ -3,7 +3,10 @@ import { existsSync } from 'node:fs';
 
 const config: KnipConfig = {
   workspaces: {
-    '.': { entry: ['steiger.config.mjs'] },
+    '.': {
+      // Public starter APIs remain available for generated projects to consume.
+      entry: ['steiger.config.mjs', 'src/shared/ui/index.ts', 'src/shared/api-client/index.ts', 'src/shared/lib/Env.ts'],
+    },
     ...(existsSync(new URL('./packages/next-fsd/package.json', import.meta.url))
       ? {
           'packages/next-fsd': {
@@ -17,7 +20,7 @@ const config: KnipConfig = {
   ignore: [
     '.storybook/**/*',
     'src/shared/lib/I18n.ts',
-    'src/shared/types/I18n.ts',
+    'src/shared/types/index.ts',
     'src/shared/utils/Helpers.ts',
     'tests/**/*.ts',
   ],
@@ -26,10 +29,6 @@ const config: KnipConfig = {
     '@commitlint/types',
     'conventional-changelog-conventionalcommits',
     'vite',
-  ],
-  // Binaries to ignore during analysis
-  ignoreBinaries: [
-    'production', // False positive raised with dotenv-cli
   ],
   compilers: {
     css: (text: string) => [...text.matchAll(/(?<=@)import[^;]+/g)].join('\n'),
