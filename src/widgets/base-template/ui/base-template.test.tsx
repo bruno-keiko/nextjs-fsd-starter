@@ -2,7 +2,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { page } from 'vitest/browser';
-import messages from '@/shared/config/locales/en.json';
+import { enMessages as messages } from '@/shared/config';
 import { BaseTemplate } from './base-template';
 
 describe('Base template', () => {

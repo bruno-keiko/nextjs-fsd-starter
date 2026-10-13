@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { NextIntlClientProvider } from 'next-intl';
-import messages from '@/shared/config/locales/en.json';
+import { enMessages as messages } from '@/shared/config';
 import { BaseTemplate } from './base-template';
 
 const meta = {

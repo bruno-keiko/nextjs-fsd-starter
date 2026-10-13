@@ -1,2 +1,1 @@
-// Configuration exports - locales are imported directly by next-intl
-// This file exists for future configuration exports
+export { default as enMessages } from './locales/en.json';

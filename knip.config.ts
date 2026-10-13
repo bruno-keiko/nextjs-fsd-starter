@@ -1,6 +1,7 @@
 import type { KnipConfig } from 'knip';
 
 const config: KnipConfig = {
+  entry: ['steiger.config.mjs'],
   // Files to exclude from Knip analysis
   ignore: [
     '.storybook/**/*',

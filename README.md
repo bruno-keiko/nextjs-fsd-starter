@@ -85,7 +85,7 @@ Built-in features from Next.js:
 
 ### Requirements
 
-- Node.js 22+ and npm
+- Node.js 22.18+ and npm
 
 ### Getting started
 
@@ -140,6 +140,7 @@ For translation, the project uses `next-intl`. You can manage translations by ed
 
 ```shell
 .
+├── AGENTS.md                       # Shared AI coding instructions
 ├── README.md                       # README file
 ├── .github                         # GitHub folder
 │   ├── actions                     # Reusable actions
@@ -165,6 +166,12 @@ For translation, the project uses `next-intl`. You can manage translations by ed
 ├── vitest.config.mts               # Vitest configuration
 └── tsconfig.json                   # TypeScript configuration
 ```
+
+### AI coding instructions
+
+[AGENTS.md](AGENTS.md) contains the shared, repo-specific instructions for AI coding tools and is included in generated projects. It covers architecture, project conventions, validation, and template variants; framework tutorials and generic coding advice are omitted.
+
+Use it directly with tools that support [AGENTS.md](https://agents.md/). If your tool requires another instruction filename, use its supported import mechanism to reference this file. For example, Claude Code configurations that require `CLAUDE.md` can use a file containing `@AGENTS.md`.
 
 ### Customization
 
@@ -198,6 +205,10 @@ npm run db:migrate
 There is no need to restart the Next.js server for the changes to take effect.
 
 ### Commit Message Format
+
+Lefthook runs staged-file linting, TypeScript checks, and the full FSD architecture check before commits. Architecture errors block the commit; warnings remain advisory. The same architecture check also runs in CI. Run it manually with `npm run check:fsd`.
+
+The check uses [Steiger and the official FSD plugin](https://github.com/feature-sliced/steiger). `steiger.config.mjs` starts from the recommended rules, allows Next.js route folder names, and treats the existing Shared `utils`/`types` segment names as warnings.
 
 The project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification, meaning all commit messages must be formatted accordingly. To help you write commit messages, the project provides an interactive CLI that guides you through the commit process. To use it, run the following command:
 
@@ -295,6 +306,7 @@ The project includes several commands to ensure code quality and consistency. Yo
 - `npm run lint` to check for linting errors
 - `npm run lint:fix` to automatically fix fixable issues from the linter
 - `npm run check:types` to verify type safety across the entire project
+- `npm run check:fsd` to validate FSD architecture and import boundaries
 - `npm run check:deps` help identify unused dependencies and files
 - `npm run check:i18n` ensures all translations are complete and properly formatted
 

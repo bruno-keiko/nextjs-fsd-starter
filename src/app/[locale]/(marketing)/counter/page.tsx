@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { CurrentCount } from '@/entities/counter/index.server';
 import { CounterForm } from '@/features/counter-increment';
-import { CurrentCount } from '@/entities/counter';
 
 export async function generateMetadata(props: {
   params: Promise<{ locale: string }>;

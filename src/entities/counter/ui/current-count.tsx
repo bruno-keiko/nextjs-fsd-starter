@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { db, logger } from '@/shared/lib';
-import { counterSchema } from '@/entities/counter/model';
+import { counterSchema } from '../model';
 
 export const CurrentCount = async () => {
   const t = await getTranslations('CurrentCount');
@@ -10,9 +10,11 @@ export const CurrentCount = async () => {
   // `x-e2e-random-id` is used for end-to-end testing to make isolated requests
   // The default value is 0 when there is no `x-e2e-random-id` header
   const id = Number((await headers()).get('x-e2e-random-id')) || 0;
-  const result = await db.query.counterSchema.findFirst({
-    where: eq(counterSchema.id, id),
-  });
+  const [result] = await db
+    .select({ count: counterSchema.count })
+    .from(counterSchema)
+    .where(eq(counterSchema.id, id))
+    .limit(1);
   const count = result?.count ?? 0;
 
   logger.info('Counter fetched successfully');

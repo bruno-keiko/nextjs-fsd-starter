@@ -10,6 +10,8 @@ npx next-fsd my-app
 
 By default, scaffolds a **frontend-only** project (no database). Use `--include db` when you need database features (Drizzle, PGLite, migrations).
 
+Generated projects include the template's `AGENTS.md` with shared, repo-specific AI coding instructions.
+
 ## Options
 
 ```bash
@@ -37,4 +39,3 @@ NEXT_FSD_REF=main
 ## Publishing notes
 
 This folder is a standalone npm package. Publish `packages/next-fsd` to npm as `next-fsd`.
-

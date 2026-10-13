@@ -16,3 +16,6 @@ pre-commit:
       glob: '*.{ts,tsx}'
       run: npm run check:types
       priority: 2
+    check-fsd:
+      run: npm run check:fsd
+      priority: 3

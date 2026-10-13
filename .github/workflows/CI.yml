@@ -73,6 +73,9 @@ jobs:
       - name: Type checking
         run: npm run check:types
 
+      - name: FSD architecture
+        run: npm run check:fsd
+
       - name: Check dependencies
         run: npm run check:deps
 
@@ -170,4 +173,3 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 7
-

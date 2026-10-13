@@ -1,7 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { Env } from '@/shared/lib/Env';
-import * as schema from '@/entities/counter/model';
 
 export const createDbConnection = () => {
   const pool = new Pool({
@@ -13,6 +12,5 @@ export const createDbConnection = () => {
 
   return drizzle({
     client: pool,
-    schema,
   });
 };
