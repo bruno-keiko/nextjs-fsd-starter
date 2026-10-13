@@ -1,9 +1,10 @@
+import type { VariantProps } from 'class-variance-authority';
+import { cva } from 'class-variance-authority';
 import * as React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
@@ -31,41 +32,40 @@ const buttonVariants = cva(
   },
 );
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
-}
+export type ButtonProps = ({
+  asChild?: false;
+  ref?: React.Ref<HTMLButtonElement>;
+} | {
+  asChild: true;
+  ref?: React.Ref<HTMLSpanElement>;
+}) & React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>;
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? 'span' : 'button';
-    const classes = cn(buttonVariants({ variant, size, className }));
+const Button = ({ ref, className, variant, size, asChild, ...props }: ButtonProps) => {
+  const classes = cn(buttonVariants({ variant, size, className }));
 
-    if (asChild) {
-      return (
-        <Comp className={classes} ref={ref as React.Ref<HTMLSpanElement>}>
-          {React.Children.map(props.children, (child) => {
-            if (React.isValidElement(child)) {
-              return React.cloneElement(child as React.ReactElement<any>, {
-                className: cn(classes, (child as React.ReactElement<any>).props.className),
-              });
-            }
-            return child;
-          })}
-        </Comp>
-      );
-    }
-
+  if (asChild) {
     return (
-      <button
-        className={classes}
-        ref={ref}
-        {...props}
-      />
+      <span className={classes} ref={ref}>
+        {React.Children.map(props.children, (child) => {
+          if (React.isValidElement(child)) {
+            return React.cloneElement(child as React.ReactElement<any>, {
+              className: cn(classes, (child as React.ReactElement<any>).props.className),
+            });
+          }
+          return child;
+        })}
+      </span>
     );
-  },
-);
+  }
+
+  return (
+    <button
+      className={classes}
+      ref={ref}
+      {...props}
+    />
+  );
+};
 Button.displayName = 'Button';
 
 export { Button, buttonVariants };

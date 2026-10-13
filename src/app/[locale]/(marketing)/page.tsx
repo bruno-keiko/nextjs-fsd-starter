@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
+import { Code, Database, Globe, Rocket, Shield, Sparkles, TestTube, Zap } from 'lucide-react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, buttonVariants } from '@/shared/ui';
-import { Rocket, Zap, Shield, Code, Database, Globe, TestTube, Sparkles } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import { Badge, buttonVariants, Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui';
 
 type IIndexProps = {
   params: Promise<{ locale: string }>;
@@ -73,11 +73,14 @@ export default async function Index(props: IIndexProps) {
             Feature-Sliced Design Architecture
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            Next.js Starter with{' '}
+            Next.js Starter with
+            {' '}
             <span className="text-[hsl(var(--primary))]">Feature-Sliced Design</span>
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-[hsl(var(--muted-foreground))]">
-            {t('intro')} A production-ready boilerplate with TypeScript, Tailwind CSS, and a scalable architecture.
+            {t('intro')}
+            {' '}
+            A production-ready boilerplate with TypeScript, Tailwind CSS, and a scalable architecture.
           </p>
         </div>
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -98,7 +101,7 @@ export default async function Index(props: IIndexProps) {
           </Link>
         </div>
         <div className="pt-4">
-          <code className="rounded-md bg-muted px-4 py-2 text-sm">
+          <code className="bg-muted rounded-md px-4 py-2 text-sm">
             npx next-fsd my-app
           </code>
         </div>
@@ -131,7 +134,7 @@ export default async function Index(props: IIndexProps) {
       </section>
 
       {/* Quick Start Section */}
-      <section className="rounded-lg border bg-muted/50 p-8">
+      <section className="bg-muted/50 rounded-lg border p-8">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-[hsl(var(--primary))]" />
@@ -140,19 +143,19 @@ export default async function Index(props: IIndexProps) {
           <div className="space-y-2 font-mono text-sm">
             <div className="flex items-center gap-2">
               <Badge variant="outline">1</Badge>
-              <code className="rounded bg-background px-2 py-1">npx next-fsd my-app</code>
+              <code className="bg-background rounded px-2 py-1">npx next-fsd my-app</code>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">2</Badge>
-              <code className="rounded bg-background px-2 py-1">cd my-app</code>
+              <code className="bg-background rounded px-2 py-1">cd my-app</code>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">3</Badge>
-              <code className="rounded bg-background px-2 py-1">npm install</code>
+              <code className="bg-background rounded px-2 py-1">npm install</code>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">4</Badge>
-              <code className="rounded bg-background px-2 py-1">npm run dev</code>
+              <code className="bg-background rounded px-2 py-1">npm run dev</code>
             </div>
           </div>
         </div>
