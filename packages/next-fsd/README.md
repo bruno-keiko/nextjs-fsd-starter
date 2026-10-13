@@ -8,9 +8,18 @@ Create a new project based on a Next.js + Feature-Sliced Design starter.
 npx next-fsd my-app
 ```
 
-By default, scaffolds a **frontend-only** project (no database). Use `--include db` when you need database features (Drizzle, PGLite, migrations).
+In an interactive terminal, the CLI asks:
 
-Generated projects include the template's `AGENTS.md` with shared, repo-specific AI coding instructions.
+1. Whether to include a local database (PGlite, Drizzle, and migrations), defaulting to **No**.
+2. Which AI coding tools you use. Select one or more by number or name.
+
+Use flags to skip either prompt. Without an interactive terminal, the defaults are **no database** and **shared AI guidance**.
+
+Generated projects include the template's `AGENTS.md`, the official FSD skill in `.agents/skills/feature-sliced-design/`, and `skills-lock.json` with its pinned upstream revision. The skill and its references are ready to reuse in each new project.
+
+After scaffolding, the CLI runs `npx skills@1.7.2` against the bundled skill to install it locally for the selected tools. It preserves the pinned upstream lockfile. Claude Code and Gemini CLI also receive instruction files that import `AGENTS.md`; existing instructions are preserved. The skill installer needs npm access or a cached copy of the pinned CLI.
+
+Choosing no database removes DB code, packages, scripts, environment settings, and database setup sections from the generated README. The demo counter uses an in-memory store, and Playwright starts the app without a database server.
 
 ## Options
 
@@ -19,14 +28,20 @@ Generated projects include the template's `AGENTS.md` with shared, repo-specific
 --ref, -r        Branch/tag/commit (default: main)
 --include, -i    Comma-separated features (default: frontend only)
                  Use --include db for database support
+--no-db         Create a project without database support; skip the DB prompt
+--ai-tool       Comma-separated AI tools; skip the tool prompt
 --force, -f      Overwrite target dir if it exists
 ```
+
+Supported AI tool names: `claude-code`, `cursor`, `codex`, `github-copilot`, `gemini-cli`, `opencode`, `windsurf`, and `universal` (shared guidance). `claude`, `copilot`, and `gemini` are accepted aliases. Use `none` to skip additional AI-tool setup; the bundled instructions and skill remain available.
 
 ## Examples
 
 ```bash
-npx next-fsd my-app                    # Frontend only (default)
-npx next-fsd my-app --include db       # With database (Drizzle, PGLite)
+npx next-fsd my-app                                       # Ask about database and AI tools
+npx next-fsd my-app --no-db --ai-tool claude-code          # No database, Claude Code setup
+npx next-fsd my-app --include db --ai-tool cursor,codex    # Database, multiple AI tools
+npx next-fsd my-app --no-db --ai-tool none                 # Skip both prompts and skill installation
 ```
 
 ## Environment
@@ -39,3 +54,5 @@ NEXT_FSD_REF=main
 ## Publishing notes
 
 This folder is a standalone npm package. Publish `packages/next-fsd` to npm as `next-fsd`.
+
+Run its setup regression tests with `npm test --prefix packages/next-fsd` from the repository root.

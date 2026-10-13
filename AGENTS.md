@@ -2,10 +2,9 @@
 
 ## Architecture
 
-- `src/app/` is the Next.js App Router, including locale routes under `[locale]`. This starter has no separate FSD pages layer.
-- Keep dependencies flowing from `app` → `widgets` → `features` → `entities` → `shared`. Slices within the same layer must not import each other; `shared` contains infrastructure and UI primitives.
-- Import slices through their public entry points, such as `@/entities/counter`. Add separate server/client entry points only when needed to preserve runtime boundaries.
-- Keep route-specific code near its route; extract reusable code into lower layers when needed. Create only the segments a slice uses.
+- For FSD architecture tasks, read the official skill at [.agents/skills/feature-sliced-design/SKILL.md](.agents/skills/feature-sliced-design/SKILL.md), then only the reference files relevant to the task. Its upstream revision is pinned in `skills-lock.json`.
+- This starter currently combines Next.js routing and page composition in `src/app/`, including locale routes under `[locale]`, instead of using separate FSD `_app`/`_pages` layers. Keep route-specific code there when extending this layout; use the skill's Next.js integration reference when deliberately migrating to separate layers.
+- The counter's server component is exported from `src/entities/counter/index.server.ts`; its default `index.ts` exposes model and validation exports for other consumers.
 
 ## Project conventions
 
@@ -24,4 +23,6 @@
 ## Template and CLI
 
 - When present, `packages/next-fsd/bin/next-fsd.mjs` scaffolds this repo. Changes to template paths or database setup must remain compatible with its frontend-only default and `--include db` variant.
+- The CLI prompts for database support and AI tools in interactive terminals; `--no-db`, `--include db`, and `--ai-tool` provide explicit choices. When the CLI package is present, run its regression tests with `npm test --prefix packages/next-fsd` when changing setup behavior.
+- Generated projects must include `AGENTS.md`, `.agents/skills/feature-sliced-design/`, and `skills-lock.json` so the official guidance and its pinned source travel with the template.
 - Database files and scripts exist in the full template and DB-enabled projects. The frontend-only variant removes them; check the project's `package.json` before using database commands. For DB-enabled projects, `npm run build-local` builds with a temporary in-memory PGlite database.

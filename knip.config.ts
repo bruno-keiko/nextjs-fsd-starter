@@ -1,7 +1,18 @@
 import type { KnipConfig } from 'knip';
+import { existsSync } from 'node:fs';
 
 const config: KnipConfig = {
-  entry: ['steiger.config.mjs'],
+  workspaces: {
+    '.': { entry: ['steiger.config.mjs'] },
+    ...(existsSync(new URL('./packages/next-fsd/package.json', import.meta.url))
+      ? {
+          'packages/next-fsd': {
+            entry: ['tests/**/*.test.mjs'],
+            project: ['bin/**/*.mjs', 'tests/**/*.mjs'],
+          },
+        }
+      : {}),
+  },
   // Files to exclude from Knip analysis
   ignore: [
     '.storybook/**/*',

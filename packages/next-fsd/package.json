@@ -1,24 +1,13 @@
 {
   "name": "next-fsd",
+  "type": "module",
   "version": "1.0.3",
   "description": "Scaffold a Next.js + Feature-Sliced Design starter",
   "license": "MIT",
-  "type": "module",
-  "main": "./bin/next-fsd.mjs",
-  "bin": {
-    "next-fsd": "./bin/next-fsd.mjs"
-  },
-  "files": [
-    "bin",
-    "README.md"
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/bruno-keiko/nextjs-fsd-starter.git",
     "directory": "packages/next-fsd"
-  },
-  "engines": {
-    "node": ">=20"
   },
   "keywords": [
     "nextjs",
@@ -30,7 +19,22 @@
     "boilerplate",
     "template"
   ],
+  "main": "./bin/next-fsd.mjs",
+  "bin": {
+    "next-fsd": "./bin/next-fsd.mjs"
+  },
+  "files": [
+    "README.md",
+    "bin"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
   "dependencies": {
+    "cross-spawn": "^7.0.6",
     "degit": "^2.8.4"
   }
 }

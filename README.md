@@ -15,11 +15,16 @@ npm install
 npm run dev
 ```
 
-By default, this scaffolds a **frontend-only** project (no database, no PGLite). Use `--include db` when you need database features (Drizzle, PGLite, migrations):
+The CLI asks whether you want a local database and which AI coding tools you use. The database choice defaults to **No**. It then installs the bundled official FSD skill for the tools you select.
+
+Use flags to choose directly:
 
 ```bash
-npx next-fsd my-app --include db
+npx next-fsd my-app --no-db --ai-tool claude-code
+npx next-fsd my-app --include db --ai-tool cursor,codex
 ```
+
+AI tools can be selected by number or name, including multiple tools separated by commas. Supported names are `claude-code`, `cursor`, `codex`, `github-copilot`, `gemini-cli`, `opencode`, `windsurf`, `universal`, and `none` (skip additional tool setup). Non-interactive runs default to no database and shared AI guidance. See the [CLI guide](https://github.com/bruno-keiko/nextjs-fsd-starter/blob/main/packages/next-fsd/README.md) for details.
 
 Visit [npm package](https://www.npmjs.com/package/next-fsd) for more information.
 
@@ -92,9 +97,9 @@ Built-in features from Next.js:
 #### Option 1: Using the CLI (Recommended)
 
 ```bash
-npx next-fsd my-app              # Frontend only (default)
+npx next-fsd my-app              # Ask about database and AI tools
 # or
-npx next-fsd my-app --include db # With database (Drizzle, PGLite)
+npx next-fsd my-app --no-db --ai-tool cursor
 cd my-app
 npm install
 npm run dev
@@ -140,6 +145,7 @@ For translation, the project uses `next-intl`. You can manage translations by ed
 
 ```shell
 .
+├── .agents/skills                  # Bundled official FSD agent skill
 ├── AGENTS.md                       # Shared AI coding instructions
 ├── README.md                       # README file
 ├── .github                         # GitHub folder
@@ -163,13 +169,24 @@ For translation, the project uses `next-intl`. You can manage translations by ed
 ├── eslint.config.mjs               # ESLint configuration
 ├── next.config.ts                  # Next JS configuration
 ├── playwright.config.ts            # Playwright configuration
+├── skills-lock.json                # Pinned upstream skill revision
 ├── vitest.config.mts               # Vitest configuration
 └── tsconfig.json                   # TypeScript configuration
 ```
 
 ### AI coding instructions
 
-[AGENTS.md](AGENTS.md) contains the shared, repo-specific instructions for AI coding tools and is included in generated projects. It covers architecture, project conventions, validation, and template variants; framework tutorials and generic coding advice are omitted.
+[AGENTS.md](AGENTS.md) contains the shared, repo-specific instructions for AI coding tools: project conventions, validation, template variants, and this starter's layout adaptations.
+
+The [official Feature-Sliced Design skill](https://github.com/feature-sliced/skills) is bundled in [.agents/skills/feature-sliced-design/](.agents/skills/feature-sliced-design/SKILL.md), including its reference files. `AGENTS.md` directs agents to consult it for architecture tasks. Generated projects include the instructions, skill, and [skills-lock.json](skills-lock.json), which pins the upstream revision and content hash. The CLI installs the bundled copy for your selected AI tools and creates `CLAUDE.md` or `GEMINI.md` imports when needed. ESLint excludes upstream skill files so their examples stay unchanged.
+
+The skill was installed locally using the official `skills` CLI. To reproduce the pinned installation:
+
+```bash
+npx skills@1.7.2 add https://github.com/feature-sliced/skills/tree/5e95aaebb84541742686e56352b7569acf4306f1 --skill feature-sliced-design --agent universal --copy --yes
+```
+
+To update it, replace the revision in that command with a reviewed upstream commit, then review the skill and lockfile changes together. Tools with another skill location can install the bundled copy with `npx skills add ./.agents/skills --skill feature-sliced-design --agent <agent-name> --yes`.
 
 Use it directly with tools that support [AGENTS.md](https://agents.md/). If your tool requires another instruction filename, use its supported import mechanism to reference this file. For example, Claude Code configurations that require `CLAUDE.md` can use a file containing `@AGENTS.md`.
 

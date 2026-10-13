@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import degit from 'degit';
+import { chooseSetup, installAiSkills, parseAiTools } from './setup.mjs';
 
 function parseArgs(argv) {
   const args = argv.slice(2);
@@ -13,19 +14,40 @@ function parseArgs(argv) {
   let template = process.env.NEXT_FSD_TEMPLATE || 'bruno-keiko/nextjs-fsd-starter';
   let ref = process.env.NEXT_FSD_REF || 'main';
   let force = false;
+  let aiTools;
+  let databaseSelected = false;
+  let noDb = false;
   const include = new Set();
 
   for (let i = 0; i < args.length; i += 1) {
     const a = args[i];
-    if (a === '--help' || a === '-h') return { help: true };
+    if (a === '--help' || a === '-h') {
+      return { help: true };
+    }
     if (a === '--force' || a === '-f') {
       force = true;
       continue;
     }
-    if (a === '--include' || a === '-i') {
-      const value = args[i + 1] || '';
-      value.split(',').map((s) => s.trim()).filter(Boolean).forEach((f) => include.add(f));
-      i += 1;
+    if (a === '--include' || a === '-i' || a.startsWith('--include=')) {
+      const value = a.startsWith('--include=') ? a.slice('--include='.length) : args[++i];
+      if (!value || value.startsWith('-')) {
+        throw new Error('--include requires a feature name, such as db.');
+      }
+      value.split(',').map(s => s.trim()).filter(Boolean).forEach(f => include.add(f));
+      databaseSelected = true;
+      continue;
+    }
+    if (a === '--no-db') {
+      noDb = true;
+      databaseSelected = true;
+      continue;
+    }
+    if (a === '--ai-tool' || a.startsWith('--ai-tool=')) {
+      const value = a.startsWith('--ai-tool=') ? a.slice('--ai-tool='.length) : args[++i];
+      if (!value || value.startsWith('-')) {
+        throw new Error('--ai-tool requires a tool name.');
+      }
+      aiTools = parseAiTools(value);
       continue;
     }
     if (a === '--template' || a === '-t') {
@@ -43,7 +65,10 @@ function parseArgs(argv) {
     }
   }
 
-  return { projectName, template, ref, force, include, help: false };
+  if (noDb && include.has('db')) {
+    throw new Error('--no-db cannot be combined with --include db.');
+  }
+  return { projectName, template, ref, force, include, aiTools, databaseSelected, help: false };
 }
 
 function usage() {
@@ -56,11 +81,16 @@ Options:
   --ref, -r        Branch/tag/commit (default: main)
   --include, -i    Comma-separated features to include (default: frontend only)
                    Use --include db for database (Drizzle, PGLite, migrations)
+  --no-db         Create a project without database support; skip the DB prompt
+  --ai-tool       Comma-separated AI tools; skip the tool prompt
+                   claude-code, cursor, codex, github-copilot, gemini-cli,
+                   opencode, windsurf, universal, or none
   --force, -f      Overwrite target dir if it exists
 
 Examples:
   npx next-fsd my-app
   npx next-fsd my-app --include db
+  npx next-fsd my-app --no-db --ai-tool claude-code,cursor
   npx next-fsd my-app --template my-org/next-starter --ref main
 
 Environment variables:
@@ -74,7 +104,9 @@ function isLikelyLocalPath(p) {
 }
 
 function normalizeLocalPath(p) {
-  if (p === '.') return '.';
+  if (p === '.') {
+    return '.';
+  }
   if (p.startsWith('file:')) {
     return fileURLToPath(p);
   }
@@ -88,7 +120,9 @@ async function copyDir(sourceDir, targetDir, { force, ignore = [] }) {
   await mkdir(targetDir, { recursive: true });
 
   for (const entry of entries) {
-    if (ignoreSet.has(entry.name)) continue;
+    if (ignoreSet.has(entry.name)) {
+      continue;
+    }
 
     const from = path.join(sourceDir, entry.name);
     const to = path.join(targetDir, entry.name);
@@ -112,9 +146,32 @@ async function updatePackageJsonName(targetDir, projectName) {
 
   pkg.name = projectName;
   // Most starter repos are templates; mark generated apps as private by default.
-  if (pkg.private === undefined) pkg.private = true;
+  if (pkg.private === undefined) {
+    pkg.private = true;
+  }
 
-  await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
+  await writeProjectPackage(targetDir, pkg);
+}
+
+async function writeProjectPackage(targetDir, pkg) {
+  await writeFile(path.join(targetDir, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
+  const lockPath = path.join(targetDir, 'package-lock.json');
+  if (existsSync(lockPath)) {
+    const lock = JSON.parse(await readFile(lockPath, 'utf8'));
+    lock.name = pkg.name;
+    if (lock.packages?.['']) {
+      const root = lock.packages[''];
+      root.name = pkg.name;
+      for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'engines']) {
+        if (pkg[field]) {
+          root[field] = pkg[field];
+        } else {
+          delete root[field];
+        }
+      }
+    }
+    await writeFile(lockPath, `${JSON.stringify(lock, null, 2)}\n`, 'utf8');
+  }
 }
 
 /** Remove database-related code and switch counter to in-memory store (frontend-only mode) */
@@ -137,8 +194,8 @@ async function stripDb(targetDir) {
     }
   }
 
-  // Create in-memory counter store
-  const counterStorePath = path.join(root, 'src', 'shared', 'lib', 'counter-store.ts');
+  // Keep the counter store in the domain that owns it.
+  const counterStorePath = path.join(root, 'src', 'entities', 'counter', 'model', 'counter-store.ts');
   await mkdir(path.dirname(counterStorePath), { recursive: true });
   await writeFile(
     counterStorePath,
@@ -169,6 +226,12 @@ export function increment(id: number, delta: number): number {
     'utf8',
   );
 
+  await writeFile(
+    path.join(root, 'src', 'entities', 'counter', 'index.server.ts'),
+    'export { getCount, increment } from \'./model/counter-store\';\nexport { CurrentCount } from \'./ui\';\n',
+    'utf8',
+  );
+
   // Replace API counter route
   const apiRoutePath = path.join(root, 'src', 'app', '[locale]', 'api', 'counter', 'route.ts');
   await mkdir(path.dirname(apiRoutePath), { recursive: true });
@@ -177,9 +240,9 @@ export function increment(id: number, delta: number): number {
     `import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import * as z from 'zod';
-import { increment } from '@/shared/lib/counter-store';
 import { logger } from '@/shared/lib';
 import { CounterValidation } from '@/entities/counter';
+import { increment } from '@/entities/counter/index.server';
 
 export const PUT = async (request: Request) => {
   const json = await request.json();
@@ -206,8 +269,8 @@ export const PUT = async (request: Request) => {
     currentCountPath,
     `import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
-import { getCount } from '@/shared/lib/counter-store';
 import { logger } from '@/shared/lib';
+import { getCount } from '../model/counter-store';
 
 export const CurrentCount = async () => {
   const t = await getTranslations('CurrentCount');
@@ -267,21 +330,21 @@ export const Env = createEnv({
   const dbDeps = ['drizzle-orm', 'pg'];
   const dbDevDeps = ['drizzle-kit', '@electric-sql/pglite-socket', '@types/pg'];
   if (pkg.dependencies) {
-    dbDeps.forEach((d) => delete pkg.dependencies[d]);
+    dbDeps.forEach(d => delete pkg.dependencies[d]);
   }
   if (pkg.devDependencies) {
-    dbDevDeps.forEach((d) => delete pkg.devDependencies[d]);
+    dbDevDeps.forEach(d => delete pkg.devDependencies[d]);
   }
 
   const dbScripts = ['db-server:file', 'db-server:memory', 'db:generate', 'db:migrate', 'db:studio'];
   if (pkg.scripts) {
-    dbScripts.forEach((s) => delete pkg.scripts[s]);
+    dbScripts.forEach(s => delete pkg.scripts[s]);
     pkg.scripts.dev = pkg.scripts['dev:next'] || 'next dev';
     pkg.scripts.build = pkg.scripts['build:next'] || 'next build --webpack';
     pkg.scripts['build-local'] = pkg.scripts.build; // CI uses build-local
   }
 
-  await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
+  await writeProjectPackage(targetDir, pkg);
 
   // Update next.config.ts - remove migrations from outputFileTracingIncludes
   const nextConfigPath = path.join(root, 'next.config.ts');
@@ -294,18 +357,51 @@ export const Env = createEnv({
     await writeFile(nextConfigPath, nextContent, 'utf8');
   }
 
-  // Update .env - remove DATABASE_URL
-  const envFile = path.join(root, '.env');
-  if (existsSync(envFile)) {
-    let envContent = await readFile(envFile, 'utf8');
-    envContent = envContent.replace(/#?\\s*DATABASE_URL=.*\\n?/g, '');
-    envContent = envContent.replace(/#?\\s*#.*[Dd]atabase.*\\n?/g, '');
-    await writeFile(envFile, envContent.trim() + '\n', 'utf8');
+  // Remove database settings from every environment variant in the template.
+  for (const name of await readdir(root)) {
+    if (name !== '.env' && !name.startsWith('.env.')) {
+      continue;
+    }
+    const envFile = path.join(root, name);
+    if (!(await stat(envFile)).isFile()) {
+      continue;
+    }
+    const envContent = await readFile(envFile, 'utf8');
+    await writeFile(envFile, envContent.replace(/^[ \t]*(?:#[ \t]*)?(?:export[ \t]+)?DATABASE_URL[ \t]*=.*(?:\r?\n|$)/gm, ''), 'utf8');
+  }
+
+  const playwrightPath = path.join(root, 'playwright.config.ts');
+  if (existsSync(playwrightPath)) {
+    const config = await readFile(playwrightPath, 'utf8');
+    await writeFile(playwrightPath, config
+      .replace('npx run-p db-server:memory start', 'npm run start')
+      .replace('npx run-p db-server:memory dev:next', 'npm run dev:next'), 'utf8');
+  }
+
+  const readmePath = path.join(root, 'README.md');
+  if (existsSync(readmePath)) {
+    let readme = await readFile(readmePath, 'utf8');
+    for (const heading of ['### Set up remote database', '### Change database schema', '### Local Production Build', '#### Database Studio']) {
+      const start = readme.indexOf(`${heading}\n`);
+      if (start === -1) {
+        continue;
+      }
+      const end = readme.indexOf('\n### ', start + heading.length);
+      readme = readme.slice(0, start) + (end === -1 ? '' : readme.slice(end + 1));
+    }
+    readme = readme
+      .replace('Database with DrizzleORM (PostgreSQL, SQLite, and MySQL), Local database with PGlite, ', '')
+      .replace(' (includes full database setup)', '')
+      .replace(/^During the build process, database migrations.*\r?\n/gm, '')
+      .replace(/For your information, the project is already pre-configured with a local database using PGlite\. No extra setup is required to run the project locally\./g, 'This project runs without a database; the demo counter uses an in-memory store.')
+      .replace(/^- .*?(?:Type-safe ORM|Offline and local development database|Database exploration).*\r?\n/gm, '');
+    await writeFile(readmePath, readme, 'utf8');
   }
 }
 
 async function main() {
-  const { help, projectName, template, ref, force, include } = parseArgs(process.argv);
+  const options = parseArgs(process.argv);
+  const { help, projectName, template, ref, force } = options;
 
   if (help || !projectName) {
     // eslint-disable-next-line no-console
@@ -316,6 +412,11 @@ async function main() {
   const cwd = process.cwd();
   const targetDir = path.resolve(cwd, projectName);
 
+  if (existsSync(targetDir) && !force) {
+    throw new Error(`Target already exists: ${targetDir}\nRe-run with --force to overwrite.`);
+  }
+  const { include, aiTools } = await chooseSetup(options);
+
   // Ensure parent exists
   await mkdir(path.dirname(targetDir), { recursive: true });
 
@@ -324,18 +425,6 @@ async function main() {
 
   if (force) {
     await rm(targetDir, { recursive: true, force: true });
-  } else {
-    try {
-      const s = await stat(targetDir);
-      if (s.isDirectory()) {
-        throw new Error(
-          `Target directory already exists: ${targetDir}\n` +
-            `Re-run with --force to overwrite.`,
-        );
-      }
-    } catch {
-      // ok
-    }
   }
 
   if (isLikelyLocalPath(template)) {
@@ -363,6 +452,8 @@ async function main() {
     await stripDb(targetDir);
   }
 
+  await installAiSkills(targetDir, aiTools);
+
   // eslint-disable-next-line no-console
   console.log('\nDone.\n');
   // eslint-disable-next-line no-console
@@ -377,8 +468,6 @@ async function main() {
 
 // Always run main() when this file is executed
 main().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error(err);
   process.exit(1);
 });
-

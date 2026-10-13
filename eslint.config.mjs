@@ -28,6 +28,9 @@ export default antfu(
 
     // Ignored paths
     ignores: [
+      '.agents/skills/**', // Preserve upstream skill files and their examples.
+      '.claude/skills/**',
+      '.windsurf/skills/**',
       'migrations/**/*',
     ],
   },
@@ -52,6 +55,12 @@ export default antfu(
   },
   // --- Storybook Rules ---
   ...storybook.configs['flat/recommended'],
+  {
+    files: ['packages/next-fsd/tests/**/*.mjs'],
+    rules: {
+      'test/no-import-node-test': 'off', // The standalone CLI uses Node's test runner.
+    },
+  },
   // --- Custom Rule Overrides ---
   {
     rules: {
